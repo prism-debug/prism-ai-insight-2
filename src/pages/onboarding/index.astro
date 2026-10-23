@@ -16,7 +16,7 @@ const tiles = [src('website'), ...REQUIRED_FILES];
     <section class="ob-card ob-hero" aria-labelledby="ob-h1">
       <ProgressRing size={72} />
       <div class="ob-hero-copy">
-        <h1 class="ob-h1" id="ob-h1">Let’s get {SALON.name} ready</h1>
+        <h1 class="ob-h1" id="ob-h1">Let’s get <span data-bind="salon">{SALON.name}</span> ready</h1>
         <p class="t-small muted"><span class="tnum" data-bind="done">0</span> of {SECTIONS.length} sections set up · about <span class="tnum" data-bind="mins">{mins}</span> min left · saves as you go</p>
       </div>
       <a class="btn" href="/onboarding/files" data-continue>Continue setup<Icon name="arrow-right" size={14} /></a>
@@ -25,11 +25,18 @@ const tiles = [src('website'), ...REQUIRED_FILES];
     <section class="ob-card ob-hstep" data-hub-step="connect" data-state="todo" aria-labelledby="ob-s1">
       <span class="ob-stepnum" aria-hidden="true"><span class="n">1</span><Icon name="check" size={14} sw={3} class="ok" /></span>
       <div class="ob-hstep-copy">
-        <h2 class="ob-h2" id="ob-s1"><span class="when-todo">Connect {pb}</span><span class="when-done">{pb} connected</span></h2>
-        <p class="t-small muted"><span class="when-todo">Brings in your services, prices, team and hours. Read-only, nothing changes in {pb}.</span><span class="when-done">{SERVICES.length} services, {STYLISTS.length} stylists, hours synced</span></p>
+        <h2 class="ob-h2" id="ob-s1"><span class="when-todo">Connect <span data-bind="crm">{pb}</span></span><span class="when-done"><span data-bind="crm">{pb}</span> connected</span></h2>
+        <p class="t-small muted"><span class="when-todo">Brings in your services, prices, team and hours. Read-only, nothing changes in <span data-bind="crm">{pb}</span>.</span><span class="when-done">{SERVICES.length} services, {STYLISTS.length} stylists, hours synced</span></p>
       </div>
-      <button type="button" class="btn btn-black when-todo" data-pick="phorest">Connect {pb}<span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+      <button type="button" class="btn btn-black when-todo" data-pick="phorest">Connect <span data-bind="crm">{pb}</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
       <a class="btn btn-sm when-done" href="/onboarding/connections">Manage</a>
+      <div class="ob-crm-ask when-todo" data-crm-ask hidden>
+        <p class="t-small muted">You weren’t sure at signup. Pick the one your salon books with and we’ll connect it.</p>
+        <div class="ob-crm-ask-btns">
+          <button type="button" class="btn" data-crm-choose="phorest"><Icon name="calendar-sync" size={14} />Phorest</button>
+          <button type="button" class="btn" data-crm-choose="zenoti"><Icon name="calendar-sync" size={14} />Zenoti</button>
+        </div>
+      </div>
     </section>
 
     <section class="ob-card ob-hstep" data-hub-step="files" data-state="todo" aria-labelledby="ob-s2">
@@ -50,7 +57,7 @@ const tiles = [src('website'), ...REQUIRED_FILES];
       </ul>
       <details class="ob-opt">
         <summary><Icon name="chevron-right" size={13} class="ob-opt-chev" />Optional: price list and team bios</summary>
-        <p class="t-small muted">{pb} already has your services, prices and team. Add a price list or team bios only if they say something {pb} doesn’t, like menu wording or stylist bios.</p>
+        <p class="t-small muted"><span data-bind="crm">{pb}</span> already has your services, prices and team. Add a price list or team bios only if they say something <span data-bind="crm">{pb}</span> doesn’t, like menu wording or stylist bios.</p>
         <ul class="ob-tiles">
           {OPTIONAL_FILES.map((s) => (
             <li class="ob-tile" data-src-tile={s.id} data-ready="false">
@@ -77,7 +84,7 @@ const tiles = [src('website'), ...REQUIRED_FILES];
         <Avatar kind="joy" size="md" />
         <div>
           <h2 class="t-head" id="ob-sum">What Joy knows so far</h2>
-          <p class="t-small muted" data-sum-sub>Nothing yet. Connect {pb} and Prism starts filling this in.</p>
+          <p class="t-small muted" data-sum-sub>Nothing yet. Connect <span data-bind="crm">{pb}</span> and Prism starts filling this in.</p>
         </div>
       </div>
       <dl class="ob-sum-metrics">

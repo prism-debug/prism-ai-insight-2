@@ -1,0 +1,144 @@
+---
+// Pre-onboarding: one question per screen, about a minute. Qualifies the salon on its booking system, then hands into Salon setup.
+import '../styles/base.css';
+import '../styles/components.css';
+import '../styles/signup.css';
+import Icon from '../components/Icon.astro';
+import { BOOKING_SYSTEMS, BOOKING_OTHER, SUPPORTED, ROLES, BUSINESS_TYPES, STEPS } from '../data/signup.ts';
+const total = STEPS.reduce((a, s) => a + s.seconds, 0);
+const supportedNames = SUPPORTED.map((s) => s.name).join(' or ');
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#F5F3EF" />
+    <title>Create your account · PRISM</title>
+    <meta name="description" content="Start with PRISM in about a minute. One question at a time, no password to invent." />
+    <link rel="icon" type="image/svg+xml" href="/brand/mark-color.svg" />
+  </head>
+  <body class="login-body su-body">
+    <main class="login su">
+      <section class="login-art su-art" aria-label="PRISM">
+        <img class="login-video" src="/media/login-poster.jpg" alt="" aria-hidden="true" />
+        <div class="login-art-shade"></div>
+        <img class="login-art-logo" src="/brand/wordmark-light-bold.svg" alt="PRISM" width="102" height="32" />
+        <div class="login-art-copy">
+          <p class="login-label">About a minute</p>
+          <p class="login-headline">One question at a time. Nothing to remember.</p>
+        </div>
+      </section>
+
+      <section class="login-form-wrap su-wrap">
+        <div class="login-form su-form" data-signup data-step="email">
+          <a class="su-back" href="#" data-back><Icon name="arrow-left" size={14} />Back</a>
+          <p class="su-resume" data-resume hidden>Picking up where you left off. <button type="button" class="login-link" data-reset>Start over</button></p>
+
+          <ol class="su-progress" aria-label="Steps" data-progress>
+            {STEPS.map((s) => <li data-prog={s.id}><i></i><span>{s.label}</span></li>)}
+          </ol>
+          <p class="su-time t-small muted" data-time>About <span data-time-n>{total >= 60 ? '1 minute' : `${total} seconds`}</span> left</p>
+
+          <p class="sr-only" data-announce aria-live="polite"></p>
+          <p class="su-err" data-err role="alert" hidden></p>
+
+          <!-- 1 Email -->
+          <form class="su-step" data-panel="email" novalidate>
+            <h1 class="su-title" tabindex="-1">What’s your email?</h1>
+            <button type="button" class="btn login-google su-google" data-google>
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.3h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2.1-1.9 3.4-4.7 3.4-8.1z"/><path fill="#34A853" d="M12 23c3 0 5.4-1 7.2-2.7l-3.5-2.7c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6-4.5H2.4v2.800A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M6 14.100a6.600 6.600 0 0 1 0-4.200V7.100H2.400a11 11 0 0 0 0 9.800z"/><path fill="#EA4335" d="M12 5.400c1.600 0 3 .6 4.100 1.600l3.100-3.100A11 11 0 0 0 2.400 7.100L6 9.900c.8-2.600 3.200-4.500 6-4.500z"/></svg>
+              Continue with Google
+            </button>
+            <p class="su-or"><span>or</span></p>
+            <label class="login-field"><span>Work email</span><input class="input" type="email" name="email" inputmode="email" autocomplete="email" placeholder="you@yoursalon.com" data-field="email" /></label>
+            <p class="t-small muted su-hint" data-hint="email">No password to invent. We’ll email you a sign-in link.</p>
+            <button type="submit" class="btn btn-black login-submit"><span>Continue</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+            <p class="login-foot">Already have an account? <a href="/login" class="login-link">Sign in</a></p>
+          </form>
+
+          <!-- 2 You -->
+          <form class="su-step" data-panel="you" novalidate hidden>
+            <h1 class="su-title" tabindex="-1">Nice to meet you. What should we call you?</h1>
+            <label class="login-field"><span>First name</span><input class="input" type="text" name="name" autocomplete="given-name" placeholder="Amara" data-field="name" /></label>
+            <fieldset class="su-group">
+              <legend>Your role <span class="muted">· choose one</span></legend>
+              <div class="su-chips" role="radiogroup" aria-label="Your role" data-radios="role">
+                {ROLES.map((r) => <button type="button" class="chip" role="radio" aria-checked="false" data-value={r}>{r}</button>)}
+              </div>
+            </fieldset>
+            <button type="submit" class="btn btn-black login-submit"><span>Continue</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+            <p class="login-foot"><button type="button" class="login-link" data-skip>Skip for now</button></p>
+          </form>
+
+          <!-- 3 Your salon -->
+          <form class="su-step" data-panel="salon" novalidate hidden>
+            <h1 class="su-title" tabindex="-1">Tell us about your salon</h1>
+            <label class="login-field"><span>Salon name</span><input class="input" type="text" name="salon" autocomplete="organization" placeholder="Marlow & Finch" data-field="salon" /></label>
+            <p class="t-small muted su-hint" data-hint="salon" hidden>We guessed this from your email. Change it if it’s off.</p>
+            <fieldset class="su-group">
+              <legend>What kind of business <span class="muted">· choose one</span></legend>
+              <div class="su-chips" role="radiogroup" aria-label="Kind of business" data-radios="type">
+                {BUSINESS_TYPES.map((t) => <button type="button" class="chip" role="radio" aria-checked="false" data-value={t}>{t}</button>)}
+              </div>
+            </fieldset>
+            <button type="submit" class="btn btn-black login-submit"><span>Continue</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+            <p class="login-foot"><button type="button" class="login-link" data-skip>Skip for now</button></p>
+          </form>
+
+          <!-- 4 Booking system -->
+          <form class="su-step su-step-wide" data-panel="booking" novalidate hidden>
+            <h1 class="su-title" tabindex="-1">Which booking system do you use?</h1>
+            <p class="su-sub">PRISM reads your bookings from it. {supportedNames} connect today.</p>
+            <div class="su-tiles" role="radiogroup" aria-label="Booking system" data-radios="booking">
+              {BOOKING_SYSTEMS.map((b) => (
+                <button type="button" class="su-tile" role="radio" aria-checked="false" data-value={b.id} data-supported={String(b.supported)}>
+                  <Icon name={b.icon} size={18} />
+                  <strong>{b.name}</strong>
+                  <small>{b.supported ? 'Connects today' : 'Coming soon'}</small>
+                  <Icon name="check" size={14} sw={3} class="su-tile-ok" />
+                </button>
+              ))}
+              {BOOKING_OTHER.map((b) => (
+                <button type="button" class="su-tile quiet" role="radio" aria-checked="false" data-value={b.id}>
+                  <Icon name={b.icon} size={18} />
+                  <strong>{b.name}</strong>
+                  <small>{b.hint}</small>
+                  <Icon name="check" size={14} sw={3} class="su-tile-ok" />
+                </button>
+              ))}
+            </div>
+            <label class="login-field" data-other hidden><span>Which one?</span><input class="input" type="text" name="bookingOther" placeholder="The name of your booking system" data-field="bookingOther" /></label>
+            <button type="submit" class="btn btn-black login-submit"><span>Continue</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+          </form>
+
+          <!-- 5 You're in -->
+          <section class="su-step" data-panel="in" hidden>
+            <span class="su-done-ic"><Icon name="check" size={22} sw={3} /></span>
+            <h1 class="su-title" tabindex="-1">You’re in, <span data-bind="name">there</span>.</h1>
+            <p class="su-sub">Here’s what happens next. It takes about 15 minutes and saves as you go.</p>
+            <ol class="su-next">
+              <li><b>1</b><span>Connect <span data-bind="crm">your booking system</span>. It brings in your services, prices, team and hours.</span></li>
+              <li><b>2</b><span>Add four files: policies, brand guide, FAQs and photos.</span></li>
+              <li><b>3</b><span>Check each section. Joy only uses what you confirm.</span></li>
+            </ol>
+            <a class="btn btn-black login-submit" href="/onboarding" data-finish><span>Set up <span data-bind="salon">your salon</span></span><span class="arrow"><Icon name="arrow-right" size={14} /></span></a>
+            <p class="login-proto">Prototype · in production this button is the sign-in link we email you</p>
+          </section>
+
+          <!-- Not supported yet -->
+          <section class="su-step" data-panel="list" hidden>
+            <span class="su-done-ic wait"><Icon name="clock-3" size={22} /></span>
+            <h1 class="su-title" tabindex="-1">PRISM doesn’t read <span data-bind="crmOther">that system</span> yet</h1>
+            <p class="su-sub">You’re on the list. We’ll email <b data-bind="email"></b> the day it connects, and you’ll be first in.</p>
+            <p class="login-foot">Also use {supportedNames}? <button type="button" class="login-link" data-goto="booking">Pick it instead</button></p>
+            <p class="login-foot"><a href="/waitlist" class="login-link">Back to the website</a></p>
+          </section>
+
+          <p class="login-proto su-proto">Prototype · fictitious salon data · nothing is sent anywhere</p>
+        </div>
+      </section>
+    </main>
+    <script>import '../scripts/signup.ts';</script>
+  </body>
+</html>

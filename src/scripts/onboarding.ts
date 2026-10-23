@@ -63,7 +63,7 @@ function model() {
 }
 
 // ---------- render
-const SHORT: Partial<Record<SourceId, string>> = { phorest: SALON.booking.system, website: 'your website' };
+const SHORT: Partial<Record<SourceId, string>> = { phorest: crmName, website: 'your website' };
 function rowHint(s: Section, status: Status, conflicts: string[]) {
   if (!s.sources.length) return status === 'todo' ? 'Opens when the other sections are confirmed' : st.live ? 'Joy is live' : 'Chat with Joy, then turn her on';
   if (status === 'waiting') return 'Texting number waiting on carrier approval';
@@ -75,9 +75,15 @@ function rowHint(s: Section, status: Status, conflicts: string[]) {
   return opt.length && status !== 'complete' ? `${base} · ${opt[0]} optional` : base;
 }
 const bind = (k: string, v: string | number) => $$(`[data-bind="${k}"]`).forEach((el) => (el.textContent = String(v)));
+// what the owner told us at signup: salon name and booking system. Phorest stays the fixture's data source; only the words change.
+const signup = (() => { try { return JSON.parse(localStorage.getItem('prism-signup') || 'null') as { salon?: string; booking?: string; bookingOther?: string; done?: boolean } | null; } catch { return null; } })();
+const CRM_NAMES: Record<string, string> = { phorest: 'Phorest', zenoti: 'Zenoti' };
+const crmName = signup?.done && signup.booking && CRM_NAMES[signup.booking] ? CRM_NAMES[signup.booking] : SALON.booking.system;
 function render() {
   const m = model();
   if (st.pct !== m.pct) { st.pct = m.pct; persist(); }
+  if (signup?.done && signup.salon) bind('salon', signup.salon);
+  bind('crm', crmName);
   bind('pct', m.pct); bind('done', m.setUp); bind('mins', m.minsLeft); bind('files-n', `${m.filesN}/${REQUIRED_FILES.length}`);
   bind('facts', m.facts); bind('confirmed', m.confirmedFacts); bind('conflicts', m.conflicts.length); bind('asks', m.asks); bind('ready', m.ready);
   bind('kb-n', Object.keys(st.files).filter((k) => src(k as SourceId).kind === 'file').length + st.extra.length); bind('gaps-n', m.gaps.length);
@@ -149,10 +155,14 @@ function render() {
     filesStep.dataset.state = filesDone ? 'done' : 'todo';
     connect.toggleAttribute('data-active', !has('phorest'));
     filesStep.toggleAttribute('data-active', has('phorest') && !filesDone);
+    const asking = !has('phorest') && signup?.done && signup.booking === 'unsure';
+    connect.toggleAttribute('data-asking', !!asking);
+    const ask = $('[data-crm-ask]', connect); if (ask) ask.hidden = !asking;
+    if (asking) $('#ob-s1 .when-todo', connect)!.textContent = 'Which booking system do you use?';
     $('[data-files-cta]', filesStep)!.textContent = filesDone ? 'Manage files' : m.filesN || has('website') ? 'Add the rest' : 'Add files';
   }
   $$('[data-continue]').forEach((a) => a.setAttribute('href', m.next));
-  $$('[data-sum-sub]').forEach((el) => (el.textContent = m.facts ? `Built from ${m.filesN} ${m.filesN === 1 ? 'file' : 'files'}${has('website') ? `, ${SALON.site}` : ''}${has('phorest') ? ` and ${SALON.booking.system}` : ''}. Joy only uses facts you confirm.` : `Nothing yet. Connect ${SALON.booking.system} and Prism starts filling this in.`));
+  $$('[data-sum-sub]').forEach((el) => (el.textContent = m.facts ? `Built from ${m.filesN} ${m.filesN === 1 ? 'file' : 'files'}${has('website') ? `, ${SALON.site}` : ''}${has('phorest') ? ` and ${crmName}` : ''}. Joy only uses facts you confirm.` : `Nothing yet. Connect ${crmName} and Prism starts filling this in.`));
   $$('[data-gaps]').forEach((ul) => {
     const golive = !!ul.closest('.ob-sec');
     const g = m.gaps.slice(0, golive ? 6 : 3);
@@ -338,6 +348,8 @@ document.addEventListener('click', (e) => {
     if (on) toast(`${$('strong', li)!.textContent} connected.`);
     return;
   }
+  const choose = t.closest<HTMLElement>('[data-crm-choose]');
+  if (choose && signup) { signup.booking = choose.dataset.crmChoose; try { localStorage.setItem('prism-signup', JSON.stringify(signup)); } catch { /* ignore */ } location.reload(); return; }
   const ask = t.closest<HTMLElement>('[data-ask]');
   if (ask) { chat(ask.dataset.ask!); return; }
   const on = t.closest<HTMLButtonElement>('[data-turn-on]');

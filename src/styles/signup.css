@@ -1,0 +1,70 @@
+/* Signup (pre-onboarding). Reuses the login shell; adds step panels, labelled progress and the booking tiles. Tokens only. */
+.su-form { max-width: 400px; gap: var(--s-3); position: relative; }
+.su-form[data-step="booking"] { max-width: 560px; }
+.su-step { display: grid; gap: var(--s-4); }
+.su-step[hidden] { display: none; }
+.su-title { font-family: var(--font-display); font-weight: 700; font-size: var(--t-28); letter-spacing: -0.02em; line-height: 1.12; text-wrap: balance; outline: none; }
+.su-sub { color: var(--ink-2); font-size: var(--t-14); line-height: 1.5; margin-top: calc(var(--s-2) * -1); }
+
+.su-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: var(--t-13); font-weight: 600; color: var(--ink-2); width: max-content; }
+.su-back:hover { color: var(--ink); }
+.su-back[hidden] { display: none; }
+.su-resume { font-size: var(--t-13); color: var(--ink-2); padding: 8px 12px; border-radius: var(--r-md); background: var(--violet-wash); }
+
+.su-progress { display: flex; gap: 6px; }
+.su-progress li { flex: 1; display: grid; gap: 6px; font-size: var(--t-11); font-weight: 600; color: var(--ink-3); }
+.su-progress li i { display: block; height: 4px; border-radius: 2px; background: var(--line); transition: background var(--dur) var(--ease); }
+.su-progress li[data-state="current"] { color: var(--ink); }
+.su-progress li[data-state="current"] i { background: var(--action); }
+.su-progress li[data-state="done"] { color: var(--violet-deep); }
+.su-progress li[data-state="done"] i { background: var(--violet); }
+.su-time { margin-top: calc(var(--s-2) * -1); }
+.su-time[hidden] { display: none; }
+
+.su-err { padding: 10px 12px; border-radius: var(--r-md); background: var(--attn-wash); color: var(--attn); font-size: var(--t-13); font-weight: 500; line-height: 1.45; }
+.su-err[hidden] { display: none; }
+.su-form .input[aria-invalid="true"] { border-color: var(--attn); box-shadow: 0 0 0 3px var(--attn-wash); }
+.su-hint { margin-top: calc(var(--s-2) * -1); line-height: 1.45; }
+.su-or { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: var(--t-12); }
+.su-or::before, .su-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.su-group { display: grid; gap: 8px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.su-group legend { font-size: var(--t-13); font-weight: 500; padding: 0; margin-bottom: 8px; }
+.su-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.su-chips .chip { min-height: 40px; padding: 0 14px; font-size: var(--t-13); background: #fff; cursor: pointer; }
+.su-chips .chip[aria-checked="true"] { border-style: solid; border-color: var(--violet-soft); background: var(--violet-wash); color: var(--violet-deep); }
+.su-chips .chip:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+.su-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.su-tile { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: center; text-align: left; min-height: 56px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-md); background: #fff; cursor: pointer; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+.su-tile > svg:first-child { grid-row: span 2; color: var(--ink-2); }
+.su-tile strong { font-size: var(--t-13); font-weight: 600; line-height: 1.2; }
+.su-tile small { font-size: var(--t-11); color: var(--ink-3); }
+.su-tile[data-supported="true"] small { color: var(--good); font-weight: 600; }
+.su-tile.quiet { background: var(--sunken); border-style: dashed; }
+.su-tile:hover { border-color: var(--violet-soft); background: var(--hover); }
+.su-tile[aria-checked="true"] { border-color: var(--violet); background: var(--violet-wash); box-shadow: 0 0 0 1px var(--violet); }
+.su-tile[aria-checked="true"] > svg:first-child { color: var(--violet-deep); }
+.su-tile:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+.su-tile-ok { position: absolute; top: 8px; right: 8px; color: var(--violet-deep); display: none; }
+.su-tile[aria-checked="true"] .su-tile-ok { display: block; }
+.su-form [data-other][hidden] { display: none; }
+
+.su-done-ic { justify-self: center; width: 48px; height: 48px; border-radius: 50%; background: var(--good); color: #fff; display: grid; place-items: center; }
+.su-done-ic.wait { background: var(--violet-wash); color: var(--violet-deep); }
+.su-next { display: grid; gap: 10px; }
+.su-next li { display: flex; gap: 10px; align-items: flex-start; font-size: var(--t-14); line-height: 1.45; color: var(--ink-2); }
+.su-next b { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: #fff; font-size: var(--t-12); display: grid; place-items: center; margin-top: 1px; }
+.su-form .login-foot .login-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px; }
+.su-proto { margin-top: var(--s-4); }
+.su-form[data-step="in"] .su-proto { display: none; }
+
+@media (max-width: 900px) {
+  .su-art { min-height: 160px; }
+  .su-art .login-headline { font-size: 1.35rem; }
+  .su-title { font-size: var(--t-22); }
+  .su-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .su-tile { min-height: 60px; }
+  .su-chips .chip { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .su-progress li i, .su-tile { transition: none; } }

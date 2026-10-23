@@ -43,6 +43,10 @@
 .ob-hstep[data-state="done"] .when-done { display: inline-flex; }
 .ob-hstep[data-state="done"] p .when-done, .ob-hstep[data-state="done"] h2 .when-done { display: inline; }
 .ob-hstep[data-state="done"][data-hub-step="connect"] { padding-block: var(--s-3); }
+.ob-crm-ask { grid-column: 2 / -1; display: grid; gap: 8px; }
+.ob-crm-ask[hidden] { display: none; }
+.ob-crm-ask-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.ob-hstep[data-asking] > .btn-black { display: none; }
 
 .ob-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
 .ob-tile { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px; border: 1px dashed var(--line-strong); border-radius: var(--r-md); background: var(--surface); font-size: var(--t-13); min-width: 0; }

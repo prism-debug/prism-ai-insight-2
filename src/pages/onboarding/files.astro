@@ -11,8 +11,8 @@ const pb = SALON.booking.system;
   <div class="ob ob-files">
     <header class="ob-files-head">
       <p class="ob-eyebrow">Salon setup · Connect and add files</p>
-      <h1 class="ob-h1">Connect {pb}, then add a few files</h1>
-      <p class="muted measure">{pb} brings in your services, prices and team. Your files cover the rest. Nothing goes to guests until you confirm.</p>
+      <h1 class="ob-h1">Connect <span data-bind="crm">{pb}</span>, then add a few files</h1>
+      <p class="muted measure"><span data-bind="crm">{pb}</span> brings in your services, prices and team. Your files cover the rest. Nothing goes to guests until you confirm.</p>
     </header>
 
     <div class="ob-files-grid">
@@ -40,8 +40,8 @@ const pb = SALON.booking.system;
             <FileSlot source={src('website')} />
           </ul>
           <details class="ob-opt ob-opt-files">
-            <summary><Icon name="chevron-right" size={13} class="ob-opt-chev" />Optional · {pb} covers these</summary>
-            <p class="t-small muted">{pb} already has your services, prices and team. Add a price list or team bios only if they say something {pb} doesn’t, like menu wording or stylist bios.</p>
+            <summary><Icon name="chevron-right" size={13} class="ob-opt-chev" />Optional · <span data-bind="crm">{pb}</span> covers these</summary>
+            <p class="t-small muted"><span data-bind="crm">{pb}</span> already has your services, prices and team. Add a price list or team bios only if they say something <span data-bind="crm">{pb}</span> doesn’t, like menu wording or stylist bios.</p>
             <ul class="ob-slots">{OPTIONAL_FILES.map((s) => <FileSlot source={s} />)}</ul>
           </details>
         </section>

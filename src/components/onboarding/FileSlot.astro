@@ -27,7 +27,7 @@ const accept = s.id === 'photos' ? 'image/*,.zip,.heic' : s.id === 'brand' ? '.p
     <span data-when="empty">
       {s.kind === 'file'
         ? <label class="btn btn-sm"><Icon name="upload" size={14} />Upload<input class="sr-only" type="file" data-slot-input={s.id} accept={accept} multiple={s.id === 'photos'} /></label>
-        : s.id === 'phorest' ? <button type="button" class="btn btn-primary" data-pick={s.id}><Icon name="link" size={14} />Connect {SALON.booking.system}</button> : null}
+        : s.id === 'phorest' ? <button type="button" class="btn btn-primary" data-pick={s.id}><Icon name="link" size={14} />Connect <span data-bind="crm">{SALON.booking.system}</span></button> : null}
       {!s.optional && s.id !== 'phorest' && <button type="button" class="btn btn-quiet btn-sm" data-skip={s.id}>Skip</button>}
     </span>
     <span class="ob-slot-prog" data-when="uploading"><span class="ob-bar-mini"><i data-slot-pct></i></span><span class="t-small muted">{s.kind === 'file' ? 'Uploading' : 'Connecting'}</span></span>
