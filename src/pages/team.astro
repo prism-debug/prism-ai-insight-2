@@ -1,0 +1,170 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import RoleMatrix from '../components/team/RoleMatrix.astro';
+import TabMenu from '../components/settings/TabMenu.astro';
+import ListTools from '../components/ListTools.astro';
+import { TEAM } from '../data/salon.ts';
+import { ROLES, ROLE_COPY, NOTIFY_PREFS, scorecards } from '../data/team.ts';
+import { pct0, money } from '../lib/format.ts';
+
+const sc = scorecards();
+const defs: [string, string][] = [
+  ['Back in 90 days', 'Of clients this stylist saw 3 to 6 months ago, the share who came back within 90 days of that visit.'],
+  ['Average ticket', 'Average value of visits in the last 90 days.'],
+  ['Booked hours', 'Hours of services done in the last 4 weeks as a share of opening hours for one chair.'],
+  ['Rebooked', 'Clients seen in the last 90 days who already have a next appointment.'],
+];
+const best = (k: 'back' | 'ticket' | 'util' | 'rebook') => [...sc.rows].sort((a, b) => b[k] - a[k])[0].id;
+const short = (t: string) => t.replace(/ hours? ago/, ' h ago').replace(/ minutes? ago/, ' min ago').replace(/ days? ago/, ' d ago');
+const pe = (n: number, avg: number) => (Math.abs(n - avg) < 0.01 ? 'flat' : n > avg ? 'up' : 'down');
+---
+<AppShell title="Team" active="team" description="People, what each role can see, who gets which alerts, and stylist scorecards.">
+  <form class="tm" data-form>
+    <header class="tm-head">
+      <div><h1 class="t-title">Team</h1><p class="t-meta hide-m">{TEAM.length} people. Only the owner can change access.</p></div>
+      <button type="button" class="btn" data-open-drawer="invite"><Icon name="plus" size={14} />Invite someone</button>
+    </header>
+
+    <TabMenu name="tm" label="Team view" items={[{ id: 'people', label: 'People' }, { id: 'access', label: 'Who sees what' }, { id: 'alerts', label: 'Alerts' }, { id: 'scorecards', label: 'Stylist scorecards' }]} />
+    <div class="tm-tabs has-tm" data-tabs>
+      <div class="tabs" role="tablist" aria-label="Team views">
+        <button type="button" class="tab" role="tab" data-panel="people" aria-selected="true">People</button>
+        <button type="button" class="tab" role="tab" data-panel="access" aria-selected="false">Who sees what</button>
+        <button type="button" class="tab" role="tab" data-panel="alerts" aria-selected="false">Alerts</button>
+        <button type="button" class="tab" role="tab" data-panel="scorecards" aria-selected="false">Stylist scorecards</button>
+      </div>
+      <span class="unsaved t-small" data-unsaved hidden><i class="dot" style="background:var(--joy)"></i>Unsaved changes</span>
+    </div>
+
+    <section data-panel-id="people" aria-label="People" class="tm-sec">
+      <div class="tm-listbar"><ListTools label="people" /></div>
+      <div class="list">
+        <div class="row head p-row"><span class="cell">Name</span><span class="cell">Role</span><span class="cell">Can see</span><span class="cell right">Last active</span><span class="cell"></span></div>
+        {TEAM.map((p) => (
+          <div class="row p-row" data-person={p.id}>
+            <span class="cell p-n"><Avatar name={p.name} size="md" /><span class="p-nm"><span class="name">{p.name}</span>{!p.email.endsWith('@marlowfinch.example') && <span class="ext-tag" title="Works for another company, not on the salon payroll">External</span>} <span class="sub hide-m">{p.email}</span><span class="p-role only-m" data-role>{p.role}</span></span></span>
+            <span class="cell p-r hide-m" data-role>{p.role}</span>
+            <span class="cell p-see muted"><span class="only-m">Can see: </span>{p.access}</span>
+            <span class="cell right tnum p-last">{p.last === 'Active now' ? <><span class="live-dot"></span>Now</> : <span class="muted">{short(p.last)}</span>}</span>
+            <span class="cell p-menu">{p.role !== 'Owner' && <><button type="button" class="icon-btn" data-menu={`pm-${p.id}`} aria-haspopup="menu" aria-expanded="false" aria-label={`Actions for ${p.name}`}><Icon name="ellipsis" size={16} /></button>
+              <div class="menu" id={`pm-${p.id}`} role="menu"><div class="menu-head">Change role</div>{ROLES.filter((r) => r !== 'Owner').map((r) => <button type="button" role="menuitemradio" aria-checked={r === p.role ? 'true' : 'false'} class="menu-item" data-set-role={r}>{r}{r === p.role && <Icon name="check" size={14} />}</button>)}<div class="menu-sep"></div><button type="button" role="menuitem" class="menu-item" data-remove-person style="color:var(--attn)">Remove {p.name.split(' ')[0]}</button></div></>}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section data-panel-id="access" aria-label="Who sees what" class="tm-sec" hidden>
+      <div class="tm-bar"><p class="t-small muted">Joy, Dash and every page follow this grid. Hidden means blocked on the server, not just out of the menu.</p>
+        <span class="tm-bar-btns"><button type="reset" class="btn btn-sm btn-quiet">Reset</button><button type="button" class="btn btn-sm" data-save="Access updated. The change is in the audit log." disabled>Save access</button></span></div>
+      <RoleMatrix />
+    </section>
+
+    <section data-panel-id="alerts" aria-label="Alerts" class="tm-sec" hidden>
+      <div class="tm-bar"><p class="t-small muted">Choose who is alerted for each situation. Channels and quiet hours are in Settings.</p>
+        <span class="tm-bar-btns"><a class="btn btn-sm btn-quiet" href="/settings#notifications">Channels and quiet hours</a><button type="button" class="btn btn-sm" data-save="Alert preferences saved." disabled>Save</button></span></div>
+      <div class="list">
+        <div class="row head n-row"><span class="cell">Person</span><span class="cell">New lead not answered</span><span class="cell">Joy hands off a lead</span><span class="cell">Missed call</span></div>
+        {NOTIFY_PREFS.map((p) => (
+          <div class="row n-row">
+            <span class="cell"><Avatar name={p.name} size="sm" /><span class="name truncate">{p.name}</span></span>
+            {(['unanswered', 'handoff', 'missed'] as const).map((k) => (
+              <label class="cell n-sw"><input type="checkbox" class="switch" checked={p[k]} data-dirty aria-label={`${p.name}: ${k === 'unanswered' ? 'new lead not answered' : k === 'handoff' ? 'Joy hands off a lead' : 'missed call'}`} /><span class="only-m t-small muted">{k === 'unanswered' ? 'Not answered' : k === 'handoff' ? 'Joy hand-off' : 'Missed call'}</span></label>
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section data-panel-id="scorecards" aria-label="Stylist scorecards" class="tm-sec" hidden>
+      <p class="t-small muted tm-lead">Computed from your clients and appointments. Compared with the salon average, never with outside numbers. Use it to coach, not to rank.</p>
+      <div class="list">
+        <div class="row head s-row"><span class="cell">Stylist</span><span class="cell right">Back in 90 days</span><span class="cell right">Average ticket</span><span class="cell right hide-m">Booked hours</span><span class="cell right hide-m">Rebooked</span><span class="cell right hide-m">Clients</span></div>
+        {sc.rows.map((r) => (
+          <div class="row s-row">
+            <span class="cell"><Avatar name={r.name} size="md" /><span class="truncate"><span class="name">{r.name}</span> <span class="sub">{r.role}</span></span></span>
+            <span class="cell right tnum"><span class="s-v">{pct0(r.back)}</span><span class={`s-d ${pe(r.back, sc.avg.back)}`}><Icon name={pe(r.back, sc.avg.back) === 'up' ? 'arrow-up-right' : pe(r.back, sc.avg.back) === 'down' ? 'arrow-down-right' : 'minus'} size={12} /></span><span class="sub hide-m s-n">{r.backN}</span></span>
+            <span class="cell right tnum"><span class="s-v">{money(r.ticket)}</span><span class={`s-d ${pe(r.ticket / 400, sc.avg.ticket / 400)}`}><Icon name={pe(r.ticket / 400, sc.avg.ticket / 400) === 'up' ? 'arrow-up-right' : pe(r.ticket / 400, sc.avg.ticket / 400) === 'down' ? 'arrow-down-right' : 'minus'} size={12} /></span><span class="sub hide-m s-n">{r.visits} visits</span></span>
+            <span class="cell right tnum hide-m"><span class="s-v">{pct0(r.util)}</span><span class="sub s-n">{r.hours} h</span></span>
+            <span class="cell right tnum hide-m"><span class="s-v">{pct0(r.rebook)}</span><span class="sub s-n">{r.rebookN}</span></span>
+            <span class="cell right tnum hide-m muted">{r.clients}</span>
+          </div>
+        ))}
+        <div class="row s-row s-avg"><span class="cell muted">Salon average</span><span class="cell right tnum muted">{pct0(sc.avg.back)}</span><span class="cell right tnum muted">{money(sc.avg.ticket)}</span><span class="cell right tnum muted hide-m">{pct0(sc.avg.util)}</span><span class="cell right tnum muted hide-m">{pct0(sc.avg.rebook)}</span><span class="cell hide-m"></span></div>
+      </div>
+      <dl class="defs">{defs.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+      <p class="t-small muted">Highest back-in-90-days: {sc.rows.find((r) => r.id === best('back'))!.name}. Highest average ticket: {sc.rows.find((r) => r.id === best('ticket'))!.name}. Arrows compare with the salon average; the booked-hours figure is low because the demo data holds a sample of visits.</p>
+    </section>
+
+    <div class="scrim-local" data-drawer-scrim></div>
+    <aside class="drawer" id="invite" role="dialog" aria-label="Invite someone" aria-hidden="true">
+      <div class="drawer-head"><div style="flex:1"><div class="t-head">Invite someone</div><div class="t-meta">They get an email to set up their own sign-in.</div></div><button type="button" class="icon-btn" data-close-drawer aria-label="Close"><Icon name="x" size={16} /></button></div>
+      <div class="drawer-body">
+        <label class="field">Email<input class="input" type="email" id="inv-email" placeholder="name@marlowfinch.example" autocomplete="off" /></label>
+        <fieldset class="roles"><legend class="t-small strong">Role</legend>
+          {ROLES.filter((r) => r !== 'Owner').map((r, i) => (
+            <label class="role-opt"><input type="radio" name="role" value={r} checked={i === 1 ? true : false} /><span><b>{r}</b><span class="sub">Sees: {ROLE_COPY[r].sees}</span><span class="sub">Can: {ROLE_COPY[r].can}</span></span></label>
+          ))}
+        </fieldset>
+        <p class="t-small muted">Stylists see only their own clients and schedule. You can fine tune any role in Who sees what.</p>
+      </div>
+      <div class="drawer-foot"><button type="button" class="btn btn-dash" style="width:100%;height:36px" data-invite>Send invite</button></div>
+    </aside>
+  </form>
+  <script>import '../scripts/settings.ts';
+    document.addEventListener('click', (e) => { const t = (e.target as HTMLElement).closest('[role="tab"]'); if (t) t.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+  </script>
+</AppShell>
+
+<style is:global>
+  .tm, .st, .cn { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); max-width: none; }
+  .tm-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s-4); }
+  .tm-tabs { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); border-bottom: 1px solid var(--line); padding-bottom: var(--s-2); overflow-x: auto; scrollbar-width: none; }
+  .tm-tabs .tabs { flex: none; }
+  .unsaved { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); white-space: nowrap; }
+  .tm-bar { display: flex; justify-content: space-between; gap: var(--s-4); align-items: center; padding-bottom: var(--s-3); flex-wrap: wrap; }
+  .tm-bar-btns { display: inline-flex; gap: 6px; }
+  .tm-lead { padding-bottom: var(--s-3); }
+  .p-row { --cols: minmax(220px, 1.6fr) 150px minmax(0, 1.4fr) 110px 36px; }
+  .p-menu { justify-content: flex-end; } .p-menu .icon-btn { color: var(--ink-3); } .menu-item[aria-checked="true"] { font-weight: 600; } .menu-item[aria-checked] svg { margin-left: auto; color: var(--violet); }
+  .tm-listbar { display: flex; align-items: center; justify-content: flex-end; gap: var(--s-3); padding-bottom: var(--s-2); }
+  .p-see { white-space: normal; overflow: visible; text-overflow: clip; display: block; line-height: 1.4; } .p-nm { min-width: 0; } .p-role { color: var(--ink-3); font-size: var(--t-12); }
+  .n-row { --cols: minmax(180px, 1.2fr) repeat(3, minmax(120px, 1fr)); }
+  .p-row .cell.right { white-space: nowrap; }
+  .ext-tag { flex: none; font-size: var(--t-11); font-weight: 600; color: var(--ink-3); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 0 6px; line-height: 18px; }
+  .n-sw { gap: var(--s-2); cursor: pointer; }
+  .s-row { --cols: minmax(220px, 1.5fr) repeat(2, minmax(120px, 1fr)) repeat(2, minmax(110px, 1fr)) 70px; min-height: 48px; }
+  .s-row .cell { gap: 6px; }
+  .s-n { min-width: 54px; text-align: right; } .s-v { font-weight: 600; }
+  .s-d { display: inline-flex; } .s-d.up { color: var(--good); } .s-d.down { color: var(--watch); } .s-d.flat { color: var(--ink-4); }
+  .s-avg { background: var(--sunken); }
+  .defs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3) var(--s-6); padding: var(--s-4) 0; font-size: var(--t-12); } .defs dt { font-weight: 600; } .defs dd { color: var(--ink-3); }
+  .mx-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
+  .mx { font-size: var(--t-13); min-width: 640px; }
+  .mx th, .mx td { border-bottom: 1px solid var(--line); padding: 0 var(--s-2); height: 38px; text-align: center; }
+  .mx thead th { background: var(--sunken); color: var(--ink-3); font-size: var(--t-12); font-weight: 600; height: 32px; white-space: nowrap; }
+  .mx th.mx-page { text-align: left; position: sticky; left: 0; background: var(--surface); font-weight: 600; padding-left: var(--s-4); z-index: 1; min-width: 130px; } .mx thead th.mx-page { background: var(--sunken); }
+  .mx-cell { display: inline-flex; align-items: baseline; justify-content: center; gap: 5px; min-width: 64px; height: 28px; padding: 0 8px; border-radius: var(--r-sm); align-items: center; transition: background var(--dur) var(--ease); }
+  .mx-cell:not([disabled]):hover { background: var(--hover); outline: 1px solid var(--line-strong); }
+  .mx-cell[disabled] { cursor: default; } .mx-cell b { font-weight: 700; } .mx-cell small { font-size: var(--t-11); color: var(--ink-3); }
+  .mx-cell.v-E b { color: var(--violet-deep); } .mx-cell.v-V b { color: var(--ink-2); } .mx-cell.v-O b { color: var(--watch); } .mx-cell.v-none b { color: var(--ink-4); }
+  .mx-cell.changed { background: var(--joy-wash); }
+  .mx-key { padding-top: var(--s-3); } .mx-key b { color: var(--ink); }
+  .roles { border: 0; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
+  .role-opt { display: flex; gap: var(--s-3); align-items: flex-start; padding: var(--s-3); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; font-size: var(--t-13); }
+  .role-opt:has(input:checked) { border-color: var(--violet-soft); background: var(--violet-wash); }
+  .role-opt > span { display: grid; gap: 2px; } .role-opt .sub { color: var(--ink-2); font-size: var(--t-12); }
+  .role-opt input { accent-color: var(--violet); margin-top: 3px; }
+  .scrim-local { position: fixed; inset: 0; z-index: 85; background: rgb(20 18 43 / .28); opacity: 0; pointer-events: none; transition: opacity var(--dur) var(--ease); } .scrim-local.open { opacity: 1; pointer-events: auto; }
+  @media (max-width: 900px) {
+    .tm-head { align-items: center; } .tm-head .btn { flex: none; min-height: 44px; } .tm-listbar { padding: 0; }
+    .p-row.head { display: none; }
+    .p-row { --cols: minmax(0, 1fr) auto 44px; grid-template-columns: minmax(0, 1fr) auto 44px; grid-template-areas: "n last mn" "see last mn"; row-gap: 2px; padding: 10px var(--s-4); align-items: start; min-height: 56px; }
+    .p-n { grid-area: n; flex-wrap: nowrap; min-width: 0; } .p-n .p-nm { flex: 1; min-width: 0; } .p-row .p-see { display: block; } .p-see { grid-area: see; font-size: var(--t-12); padding-left: 40px; min-width: 0; overflow-wrap: anywhere; } .p-last { grid-area: last; align-self: center; } .p-menu { grid-area: mn; align-self: center; } .p-menu .icon-btn { min-width: 44px; min-height: 44px; }
+    .p-nm { display: flex; align-items: center; flex-wrap: wrap; column-gap: var(--s-2); } .p-nm .p-role::before { content: "· "; } .n-row { --cols: minmax(0, 1fr); padding: 10px var(--s-3); gap: 6px; } .n-row.head { display: none; }
+    .n-sw { min-height: 36px; justify-content: space-between; flex-direction: row-reverse; }
+    .s-row { --cols: minmax(0, 1fr) 76px 76px; } .defs { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,12 @@
+---
+interface Props { pct?: number; size?: number }
+const { pct = 0, size = 104 } = Astro.props;
+const r = 44, c = 2 * Math.PI * r;
+---
+<div class="ob-ring" style={`--sz:${size}px`} data-ring role="img" aria-label={`${pct}% set up`}>
+  <svg viewBox="0 0 104 104" width={size} height={size} aria-hidden="true">
+    <circle cx="52" cy="52" r={r} class="ob-ring-track" />
+    <circle cx="52" cy="52" r={r} class="ob-ring-fill" stroke-dasharray={c.toFixed(2)} stroke-dashoffset={(c * (1 - pct / 100)).toFixed(2)} data-ring-fill data-c={c.toFixed(2)} />
+  </svg>
+  <span class="ob-ring-n tnum"><span data-bind="pct">{pct}</span>%</span>
+</div>

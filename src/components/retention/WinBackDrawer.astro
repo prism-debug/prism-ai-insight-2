@@ -1,0 +1,53 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import { TEMPLATE, MERGE } from '../../data/retention.ts';
+import { SALON } from '../../data/salon.ts';
+---
+<aside class="side" id="wb" role="dialog" aria-modal="true" aria-label="Win back overdue clients" aria-hidden="true">
+  <div class="side-head">
+    <Avatar kind="joy" size="lg" />
+    <div style="flex:1;min-width:0"><div class="t-head">Win back <span data-wb-n>0</span> clients</div><div class="t-meta">Joy sends the texts and answers the replies</div></div>
+    <button class="icon-btn" type="button" data-close-wb aria-label="Close"><Icon name="x" size={16} /></button>
+  </div>
+  <div class="side-body">
+    <section class="sblock" aria-label="Who gets this">
+      <h3>Who gets this</h3>
+      <dl class="kv">
+        <div><dt>Will be texted</dt><dd class="tnum"><span data-wb-n>0</span></dd></div>
+        <div><dt>Skipped, no text or promo consent</dt><dd class="tnum"><span data-wb-skip>0</span></dd></div>
+        <div data-wb-left-row hidden><dt>Left out by you</dt><dd class="tnum"><span data-wb-left>0</span></dd></div>
+        <div><dt>Usual spend of those texted</dt><dd class="tnum"><span data-wb-value>$0</span></dd></div>
+      </dl>
+    </section>
+
+    <section class="sblock" aria-label="Message">
+      <h3>Dash’s draft, as <strong data-wb-who>a client</strong> will see it</h3>
+      <div aria-live="polite"><div class="sms-preview" data-wb-preview></div></div>
+      <p class="t-meta">Joy adds “Reply STOP to opt out” to every text. <span data-wb-len class="tnum">0</span> characters before that line.</p>
+      <h3><label for="wb-text">Edit the message</label></h3>
+      <div class="radio-row" role="group" aria-label="Insert a merge field" style="gap:6px">
+        {MERGE.map((m) => <button class="chip" type="button" data-merge={m.key}>{`{${m.key}}`.replace(/[{}]/g, '')}</button>)}
+      </div>
+      <textarea class="textarea" id="wb-text" rows="4">{TEMPLATE}</textarea>
+    </section>
+
+    <section class="sblock" aria-label="When">
+      <h3>When</h3>
+      <div class="radio-row">
+        <label><input type="radio" name="wbwhen" value="now" checked />Now</label>
+        <label><input type="radio" name="wbwhen" value="tomorrow" />Tomorrow 10 am</label>
+      </div>
+      <p class="t-meta" data-wb-when-note>It is before 10 am, so Joy starts at 10 am today.</p>
+    </section>
+
+    <div class="note-box">
+      <span class="strong" style="display:flex;align-items:center;gap:6px;color:var(--ink)"><Icon name="shield-check" size={14} />Consent and quiet hours</span>
+      <span>Only clients who agreed to texts and to promotions are included, and {SALON.name} is named in every message. Joy sends between 10 am and 7 pm and never overnight. Anyone who replies STOP is removed from future sends straight away.</span>
+    </div>
+  </div>
+  <div class="side-foot">
+    <button class="btn btn-quiet" type="button" data-close-wb>Cancel</button>
+    <button class="btn btn-black" type="button" data-wb-send><span>Send to <span data-wb-n>0</span></span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+  </div>
+</aside>

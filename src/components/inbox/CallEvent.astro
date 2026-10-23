@@ -1,0 +1,38 @@
+---
+import Icon from '../Icon.astro';
+import Waveform from './Waveform.astro';
+import type { CallInfo } from '../../data/inbox.ts';
+interface Props { call: CallInfo; name: string; at: string; consent: boolean }
+const { call, name, at, consent } = Astro.props;
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+const f = name.split(' ')[0];
+const len = call.voicemail ? call.voicemail.sec : call.sec;
+---
+<div class="callev">
+  <div class="call-head">
+    <span class={`call-ic ${call.missed && !call.voicemail ? 'miss' : ''}`}><Icon name={call.missed ? 'phone-missed' : 'phone-incoming'} size={15} /></span>
+    <div class="call-t"><strong>{call.voicemail ? `Voicemail from ${f}` : call.missed ? `Missed call from ${f}` : `Call with ${f}`}</strong>
+      <span class="muted t-small">{at}{!call.missed && <> · {mmss(call.sec)} · answered by {call.answeredBy}</>}</span></div>
+    {call.voicemail && <span class="tag" data-vm-tag>{call.voicemail.heard ? `Heard by ${call.voicemail.heardBy}` : 'Not heard yet'}</span>}
+  </div>
+  {call.wave.length > 0 && (
+    <div class="call-wave">
+      <button type="button" class="icon-btn play" data-toast={`Playing the ${call.voicemail ? 'voicemail' : 'recording'} (prototype)`} aria-label="Play recording"><Icon name="play" size={14} /></button>
+      <Waveform wave={call.wave} label={`Recording, ${mmss(len)}`} />
+      <span class="muted t-small tnum">{mmss(len)}</span>
+    </div>
+  )}
+  <dl class="call-sum">
+    <div><dt>Outcome</dt><dd>{call.outcome}</dd></div>
+    <div><dt><Icon name="sparkles" size={12} />Summary</dt><dd>{call.summary}</dd></div>
+  </dl>
+  <div class="call-actions">
+    {(call.transcript.length > 0 || call.voicemail) && (
+      <details class="transcript"><summary class="btn btn-sm btn-quiet"><Icon name="file-text" size={13} />Transcript</summary>
+        <div class="tr-body">{call.voicemail ? <p>{call.voicemail.transcript}</p> : call.transcript.map((t) => <p><strong>{t.who}</strong> {t.text}</p>)}</div></details>
+    )}
+    {call.voicemail && !call.voicemail.heard && <button type="button" class="btn btn-sm" data-vm-heard>Mark as heard</button>}
+    {call.missed && <button type="button" class="btn btn-sm" data-toast={`Calling ${name} (prototype)`}><Icon name="phone" size={13} />Call back</button>}
+    {call.missed && <button type="button" class="btn btn-sm" data-reply-focus disabled={!consent} title={consent ? '' : 'No text consent on file'}><Icon name="message-square" size={13} />Text {f}</button>}
+  </div>
+</div>

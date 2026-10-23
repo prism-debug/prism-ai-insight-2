@@ -1,0 +1,7 @@
+---
+import { DEMOS } from '../data/demos.ts';
+---
+<div class="demo-pick" role="group" aria-label="Guided demos">
+  <span class="demo-pick-label">Demo</span>
+  {DEMOS.map((d) => <button type="button" class="demo-pick-btn" data-demo-start={d.id} aria-pressed="false" aria-label={`Demo ${d.n}: ${d.title}`} data-tip={d.title}>{d.n}</button>)}
+</div>

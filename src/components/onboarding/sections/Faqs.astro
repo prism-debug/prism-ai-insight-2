@@ -1,0 +1,32 @@
+---
+import Icon from '../../Icon.astro';
+import Fill from '../Fill.astro';
+import SourceBadge from '../SourceBadge.astro';
+import { FAQS } from '../../../data/brand.ts';
+import { FAQ_DRAFTS, HANDOFF_WHEN, HANDOFF_TO } from '../../../data/onboarding.ts';
+---
+<Fill title="FAQs drafted by Prism" sub="Found on your website and in your files. Keep, edit or remove each one. Joy only uses FAQs you keep." need={['website', 'faq']}>
+  <ul class="ob-faqs">
+    {FAQ_DRAFTS.map((f) => (
+      <li data-faq data-kept="false">
+        <div class="ob-faq-q"><strong>{f.q}</strong><SourceBadge src={f.src} /></div>
+        <p class="t-small muted" data-faq-a>{f.a}</p>
+        <textarea class="textarea" rows="2" hidden data-faq-edit aria-label={`Answer to: ${f.q}`}>{f.a}</textarea>
+        <div class="ob-faq-acts">
+          <button type="button" class="btn btn-sm" data-keep><Icon name="check" size={13} /><span>Keep</span></button>
+          <button type="button" class="btn btn-sm" data-faq-toggle><Icon name="pencil" size={13} /><span>Edit</span></button>
+        </div>
+      </li>
+    ))}
+  </ul>
+  <p class="t-small muted">+ {FAQS.length - FAQ_DRAFTS.length} more drafts</p>
+</Fill>
+
+<Fill title="When to hand off to a person" sub="Joy tells the guest someone will get back to them, then routes the conversation to the Inbox.">
+  <div class="ob-fields c3">
+    <div class="field"><span>Hand off when…</span><div class="ob-chips" role="group" aria-label="Hand off when" data-handoff>{HANDOFF_WHEN.map((h) => <button type="button" class="chip" aria-pressed={String(h.on)}>{h.label}</button>)}</div></div>
+    <div class="field"><span>Hand off to</span><div class="ob-chips" data-single role="group" aria-label="Hand off to">{HANDOFF_TO.map((h) => <button type="button" class="chip" aria-pressed={String(h.on)}>{h.label}</button>)}</div></div>
+    <label class="field">Response promise<input class="input" value="Within 2 business hours" /></label>
+  </div>
+  <p class="ob-inline" data-handoff-note hidden><Icon name="info" size={13} />Pick at least one hand-off rule before Joy goes live.</p>
+</Fill>

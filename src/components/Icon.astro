@@ -1,0 +1,22 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+interface Props { name: string; size?: number; class?: string; label?: string; sw?: number }
+const { name, size = 16, class: cls = '', label, sw } = Astro.props;
+const root = path.resolve('node_modules/lucide-static/icons');
+const cache: Map<string, string> = ((globalThis as any).__iconCache ??= new Map());
+let svg = cache.get(name);
+if (!svg) {
+  const file = path.join(root, `${name}.svg`);
+  let raw = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : fs.readFileSync(path.join(root, 'circle.svg'), 'utf8');
+  svg = raw.replace(/<!--[\s\S]*?-->/g, '').trim();
+  cache.set(name, svg);
+}
+const out = svg
+  .replace(/class="[^"]*"/, `class="icon ${cls}"`)
+  .replace(/width="\d+"/, `width="${size}"`)
+  .replace(/height="\d+"/, `height="${size}"`)
+  .replace(/stroke-width="[\d.]+"/, sw ? `stroke-width="${sw}"` : 'stroke-width="2"')
+  .replace('<svg', label ? `<svg role="img" aria-label="${label}"` : '<svg aria-hidden="true" focusable="false"');
+---
+<Fragment set:html={out} />

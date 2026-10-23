@@ -1,0 +1,18 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import type { Ev } from '../../data/leads.ts';
+import { clock } from '../../lib/format.ts';
+interface Props { ev: Ev }
+const { ev } = Astro.props;
+const icon = { in: 'message-square', out: 'send', call: ev.sub === 'No voicemail' ? 'phone-missed' : 'phone-incoming', form: 'file-text', handoff: 'hand', booking: 'calendar-check', note: 'notebook-pen', log: 'clipboard-pen', system: 'info' }[ev.kind];
+const bubble = ev.kind === 'in' || ev.kind === 'out' || ev.kind === 'form';
+---
+<li class={`tl tl-${ev.kind} by-${ev.actorKind}`} data-at={ev.at}>
+  <span class="tl-ic">{ev.actorKind === 'joy' ? <Avatar kind="joy" size="sm" /> : <Icon name={icon} size={13} />}</span>
+  <div class="tl-main">
+    <div class="tl-head"><span class="strong">{ev.actor}</span>{ev.sub && <span class="muted"> · {ev.sub}</span>}<span class="muted tnum tl-time">{clock(ev.at)}</span></div>
+    {ev.kind === 'handoff' ? <p class="tl-handoff"><span class="tag joy"><Icon name="hand" size={11} />Handed to team</span> <span>{ev.reason}</span></p>
+      : <><p class={bubble ? 'bubble' : 'tl-text'}>{ev.text}</p>{ev.reason && <p class="tl-why t-small"><Icon name="sparkles" size={11} />Why: {ev.reason}</p>}</>}
+  </div>
+</li>

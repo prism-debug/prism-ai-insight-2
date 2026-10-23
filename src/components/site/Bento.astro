@@ -1,0 +1,144 @@
+---
+// The features bento. Its live windows (src/scripts/waitlist-bento.ts) and the phone (src/scripts/waitlist-phone.ts)
+// read the same data as the prototype's Home.
+import Icon from '../Icon.astro';
+import StatusIcon from '../StatusIcon.astro';
+import { CUR, notAnsweredLeads, bySource } from '../../data/metrics.ts';
+import { VERDICT, FOCUS } from '../../data/dash.ts';
+import { NOW } from '../../data/clock.ts';
+import { source, service } from '../../data/salon.ts';
+import { ROWS, suggestion } from '../../data/inbox.ts';
+import { channelName } from '../../data/leads.ts';
+import { LIFE } from '../../data/retention.ts';
+import { money, times, dur, clock } from '../../lib/format.ts';
+
+const src = bySource();
+const meta = src.find((s) => s.source.id === 'meta')!;
+const google = src.find((s) => s.source.id === 'google')!;
+const maxBack = Math.max(meta.back ?? 0, google.back ?? 0);
+// the bento's live windows read the same data as the prototype's Home
+const waitingTotal = CUR.notAnswered + CUR.needsPerson;
+const focus = FOCUS.map((f) => ({ ...f, title: f.id === 'reply' ? `Reply to the ${waitingTotal} waiting leads` : f.title }));
+const focusTone: Record<string, string> = { attn: 'not_answered', watch: 'at_risk', joy: 'joy_handling' };
+const chanIcon = (c: string) => (c === 'phone' ? 'phone' : c === 'instagram' ? 'camera' : c === 'facebook' ? 'message-circle' : c === 'form' ? 'file-text' : 'message-square');
+// the queue: most recent first. Five show; the rest arrive one at a time while the oldest is answered.
+const queue = notAnsweredLeads().sort((a, b) => b.lastInboundAt - a.lastInboundAt).slice(0, 9)
+  .map((l) => ({ name: l.name, svc: service(l.serviceId).name, src: source(l.sourceId).name, icon: chanIcon(l.channel), min: Math.max(1, Math.round((NOW - l.lastInboundAt) / 60000)) }));
+// the phone plays the reply workflow on the longest wait among the five newest
+const phoneLeads = notAnsweredLeads().sort((a, b) => b.lastInboundAt - a.lastInboundAt).slice(0, 5).reverse();
+const lead0 = phoneLeads[0];
+const row0 = ROWS.find((r) => r.id === lead0.id);
+const phone = {
+  waiting: waitingTotal, verdict: VERDICT, na: CUR.notAnswered, np: CUR.needsPerson,
+  money: `Spent ${money(CUR.adSpend)} · Booked ${money(CUR.bookedValue)} · ${times(CUR.returnPerAd)} per $1 of ads`,
+  focus: FOCUS.map((f) => ({ t: f.title, v: f.stakeLabel.replace(/ (in play|at stake)$/, ' likely'), tone: f.tone === 'attn' ? 'not_answered' : f.tone === 'watch' ? 'at_risk' : 'joy' })),
+  list: phoneLeads.map((l) => ({ name: l.name, svc: service(l.serviceId).name, src: source(l.sourceId).name, chan: l.channel, min: Math.max(1, Math.round((NOW - l.lastInboundAt) / 60000)), preview: l.preview })),
+  thread: {
+    name: lead0.name, svc: service(lead0.serviceId).name, src: source(lead0.sourceId).name, label: channelName(lead0.channel),
+    msg: lead0.preview.match(/“(.+)”/)?.[1] ?? lead0.preview, at: `Today, ${clock(lead0.lastInboundAt)}`,
+    min: Math.max(1, Math.round((NOW - lead0.lastInboundAt) / 60000)),
+    reply: (row0 && suggestion(row0)) ?? `Hi ${lead0.name.split(' ')[0]}, sorry for the wait. When would suit you?`,
+    value: lead0.likelyValue, teamReply: dur(CUR.firstReplyTeam ?? 0),
+  },
+};
+const lifeTone: Record<string, string> = { active: 'var(--teal)', at_risk: 'var(--action)', lapsed: 'var(--mist)' };
+---
+<!-- Bento -->
+<section class="wl-wrap wl-sec" id="features" aria-labelledby="h-features">
+  <h2 id="h-features"><span class="l1">The whole salon on one desk.</span> <span class="l2">Ads, leads, bookings and clients, joined up.</span></h2>
+  <div class="wl-bento">
+    <article class="b b-wide b-verdict">
+      <div class="b-copy"><h3>One answer, one next step</h3><p>Home opens with a one-line verdict and a single button. Every number shows the last period beside it, and every figure means the same thing on every page.</p></div>
+      <div class="ui-win ui-verdict" data-live role="group" aria-label="PRISM Home, the verdict and what to do this week">
+        <div class="uv-call">
+          <p class="uv-dash"><img src="/brand/dash-mark.svg" alt="" width="16" height="16" />Dash · updated 8:02 am</p>
+          <p class="uv-verdict">{VERDICT}</p>
+          <p class="uv-money">Spent {money(CUR.adSpend)} · Booked {money(CUR.bookedValue)} · {times(CUR.returnPerAd)} per $1 of ads</p>
+          <span class="uv-btn">Reply to the {waitingTotal} waiting leads<i><Icon name="arrow-right" size={14} /></i></span>
+        </div>
+        <div class="uv-do">
+          <p class="uv-do-h">Do this week <span>Likely value</span></p>
+          <ul>
+            {focus.map((f, i) => (
+              <li style={`--i:${i}`}><StatusIcon state={focusTone[f.tone]} size={15} /><span class="uv-t">{f.title}</span><b class="tnum" data-count={f.stake} data-fmt="money">{money(f.stake)}</b></li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <article class="b b-tall b-phone">
+      <div class="b-copy"><h3>Built for the phone</h3><p>Check the business in two minutes between clients. A real mobile layout, not a shrunk desktop.</p></div>
+      <figure class="ph" id="ph" data-phone={JSON.stringify(phone)}>
+        <div class="ph-frame"></div>
+        <figcaption class="sr-only">PRISM on a phone: Home says “{VERDICT}” A tap on Reply to the {waitingTotal} waiting leads opens the longest wait, {lead0.name}, where Dash’s suggested reply is used and sent, and {waitingTotal - 1} are left waiting: {money(lead0.likelyValue)} likely value back in play, answered in {dur(NOW - lead0.lastInboundAt)} against the team’s usual {dur(CUR.firstReplyTeam ?? 0)}.</figcaption>
+      </figure>
+    </article>
+
+    <article class="b b-queue">
+      <div class="b-copy"><h3>Speed to lead, as a queue</h3><p>Who has waited longest, who has them and what they are likely worth.</p></div>
+      <div class="ui-win ui-queue" data-live data-queue role="group" aria-label={`Needs you now: ${CUR.notAnswered} leads not answered, most recent first`}>
+        <p class="uq-h"><StatusIcon state="not_answered" size={15} /><b>Not answered</b><span class="tnum" data-q-count>{CUR.notAnswered}</span><em>most recent first</em></p>
+        <ul class="uq-list">
+          {queue.map((q, i) => (
+            <li class="uq-row" hidden={i >= 5} data-min={q.min}>
+              <span class="uq-ic"><StatusIcon state="not_answered" size={15} /></span>
+              <span class="uq-name"><b>{q.name}</b> · {q.svc}</span>
+              <span class="uq-wait tnum">waiting <span data-wait>{q.min} min</span></span>
+              <span class="uq-src"><Icon name={q.icon} size={13} />{q.src}</span>
+              <span class="uq-done"><img src="/brand/joy-mark.svg" alt="" width="14" height="14" />Joy replied</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </article>
+
+    <article class="b b-ads">
+      <div class="b-copy"><h3>Ads joined to bookings</h3><p>What each channel paid back, down to the booked appointment.</p></div>
+      <div class="b-bars">
+        {[meta, google].map((s) => (
+          <div class="b-bar-row">
+            <span>{s.source.name}</span>
+            <span class="b-bar"><i style={`width:${Math.round(((s.back ?? 0) / maxBack) * 100)}%;background:${s === meta ? 'var(--teal)' : 'var(--action)'}`}></i></span>
+            <b class="tnum">{times(s.back ?? 0)}</b>
+          </div>
+        ))}
+        <p class="b-meta">Booked per $1 on ads · {money(CUR.adSpend)} spent · {money(CUR.adValue)} booked</p>
+      </div>
+    </article>
+
+    <article class="b b-inbox">
+      <div class="b-copy"><h3>One thread per guest</h3><p>Texts, Instagram and Facebook DMs, web chat, forms and calls in one place, with transcripts and a suggested reply.</p></div>
+      <ul class="b-channels">
+        {[['message-square', 'Texts'], ['camera', 'Instagram'], ['message-circle', 'Facebook'], ['globe', 'Web chat'], ['file-text', 'Forms'], ['phone-missed', 'Missed-call text back']].map(([i, l]) => <li><Icon name={i} size={15} />{l}</li>)}
+      </ul>
+    </article>
+
+    <article class="b b-retention">
+      <div class="b-copy"><h3>Win-back in one tap</h3><p>See who is drifting away. The list is already limited to clients who said yes to texts.</p></div>
+      <div class="b-life" aria-label="Clients by stage">
+        {LIFE.map((l) => <i style={`flex:${l.n};background:${lifeTone[l.key]}`} title={`${l.label}: ${l.n}`}></i>)}
+      </div>
+      <ul class="b-life-key">{LIFE.map((l) => <li><i style={`background:${lifeTone[l.key]}`}></i>{l.label} <b class="tnum">{l.n}</b></li>)}</ul>
+    </article>
+
+    <article class="b b-full b-keep">
+      <div class="b-copy"><h3>Keeps your booking system</h3><p>PRISM reads your bookings and never replaces them. Nothing is written back until you approve it.</p></div>
+      <ul class="b-plugs">
+        {['Phorest', 'Meta', 'Google Ads', 'Instagram', 'Facebook', 'Google reviews'].map((p) => <li>{p}</li>)}
+      </ul>
+    </article>
+
+    <article class="b b-safe">
+      <div class="b-copy"><h3>Safe by default</h3><p>Built so the AI never does something you would not.</p></div>
+      <ul class="b-safe-list">
+        {[['shield-check', 'Consent checked before every text'], ['moon', 'Quiet hours, 9 pm to 8 am'], ['users', 'Roles for the front desk and stylists'], ['history', 'Every change in an audit log']].map(([i, l]) => <li><span><Icon name={i} size={16} /></span>{l}</li>)}
+      </ul>
+    </article>
+  </div>
+</section>
+
+<script>
+  import '../../scripts/waitlist-bento.ts';
+  import '../../scripts/waitlist-phone.ts';
+</script>

@@ -1,0 +1,31 @@
+---
+import Avatar from '../../Avatar.astro';
+import Fill from '../Fill.astro';
+import { SALON, STYLISTS } from '../../../data/salon.ts';
+import { STYLIST_SPECIALTIES } from '../../../data/onboarding.ts';
+---
+<Fill title="Your team" sub={`Names, schedules and specialties come from ${SALON.booking.system}.`} need={['phorest']}>
+  <ul class="ob-team">
+    {STYLISTS.map((t) => { const x = STYLIST_SPECIALTIES[t.id]; return (
+      <li>
+        <Avatar name={t.name} size="lg" tone={t.tone} />
+        <span class="ob-team-who"><strong>{t.name}</strong><small>{x.level}</small></span>
+        <span class="ob-chips">{x.tags.map((g) => <button type="button" class="chip" aria-pressed="true">{g}</button>)}</span>
+        <label class="ob-team-book"><span class="t-small">{x.bookable ? 'Joy can book' : 'Joy can’t book'}</span><input type="checkbox" class="switch" checked={x.bookable} aria-label={`Joy can book ${t.name}`} data-book /></label>
+      </li>
+    ); })}
+  </ul>
+</Fill>
+
+<Fill title="Matching guests to stylists">
+  <div class="ob-fields c2">
+    <div class="field"><span>If a guest has no preference</span>
+      <div class="ob-chips" data-single role="group" aria-label="If a guest has no preference">
+        <button type="button" class="chip" aria-pressed="false">First available</button>
+        <button type="button" class="chip" aria-pressed="true">Match by specialty</button>
+        <button type="button" class="chip" aria-pressed="false">Ask the guest</button>
+      </div>
+    </div>
+    <label class="ob-toggle"><span><strong>New colour guests book a consult first</strong><small>15 min, free, with a colourist</small></span><input type="checkbox" class="switch" checked /></label>
+  </div>
+</Fill>

@@ -1,0 +1,23 @@
+---
+import { MATRIX, ROLES, ACCESS_LABEL } from '../../data/team.ts';
+---
+<div class="mx-wrap">
+  <table class="mx" aria-label="What each role can do on each page">
+    <thead><tr><th scope="col" class="mx-page">Page</th>{ROLES.map((r, i) => <th scope="col">{r}{i === 0 && <span class="sub"> locked</span>}</th>)}</tr></thead>
+    <tbody>
+      {MATRIX.map((row) => (
+        <tr>
+          <th scope="row" class="mx-page">{row.page}</th>
+          {row.v.map((v, i) => (
+            <td>
+              <button type="button" class={`mx-cell v-${v === '-' ? 'none' : v}`} data-mx data-v={v} data-orig={v} disabled={i === 0} aria-label={`${row.page}, ${ROLES[i]}: ${ACCESS_LABEL[v]}. Click to change.`}>
+                <b>{v === '-' ? '—' : v}</b>{row.notes?.[i] && <small>{row.notes[i]}</small>}
+              </button>
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+<p class="t-small muted mx-key"><b>E</b> edit · <b>V</b> view · <b>O</b> own records only · <b>—</b> hidden and blocked on the server. Click a cell to cycle it. The Owner column is locked so someone always has full access.</p>

@@ -1,0 +1,199 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import ClientRow from '../../components/clients/ClientRow.astro';
+import StatusIcon from '../../components/StatusIcon.astro';
+import { ROWS, LISTS, LIST_COUNTS, LC_VALUE, NEXT_BOOKED, STYLIST_OPTS, SERVICE_OPTS, SOURCE_OPTS } from '../../data/clients.ts';
+import { plural, money } from '../../lib/format.ts';
+const overdue = LIST_COUNTS.overdue;
+const groupOpts = [['none', 'None'], ['lifecycle', 'Lifecycle'], ['stage', 'Stage'], ['stylist', 'Stylist']];
+const MAIN = ['all', 'active', 'at_risk', 'lapsed'];
+const mainLists = LISTS.filter((l) => MAIN.includes(l.key));
+const moreLists = LISTS.filter((l) => !MAIN.includes(l.key));
+const moreLabels: Record<string, string> = { overdue: 'Overdue can text' };
+const orderOpts = [['last', 'Last visit'], ['spend', 'Lifetime spend'], ['next', 'Next visit']];
+---
+<AppShell title="Clients" active="clients" description="Your salon CRM: everyone who has booked, grouped by how recently they visited, with smart lists for who to bring back.">
+  <div class="clients" id="clients">
+    <header class="c-top">
+      <p class="c-sub t-meta tnum"><strong>{plural(NEXT_BOOKED, 'client')}</strong> with a next visit booked, out of {ROWS.length}<span class="hide-m"> · <span title="What one more visit from each would be worth, at their average ticket">At risk {money(LC_VALUE.at_risk)} · Lapsed {money(LC_VALUE.lapsed)} next-visit value</span></span><span class="sr-only"> <span data-shown>{ROWS.length}</span> shown</span><span class="c-cap muted">Win back {overdue} = at risk or lapsed clients who agreed to promo texts.</span></p>
+      <button type="button" class="btn btn-black" data-list-jump="overdue" title="Overdue clients who agreed to promo texts" aria-describedby="wb-tip"><span>Win back {overdue}</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button><span id="wb-tip" class="sr-only">Overdue clients who agreed to promo texts</span>
+    </header>
+
+    <div class="c-band">
+      <div class="c-lists" role="tablist" aria-label="Smart lists" data-lists>
+        {mainLists.map((l, i) => (
+          <button type="button" role="tab" class="tab" data-list={l.key} title={l.hint} aria-selected={i === 0 ? 'true' : 'false'}>{l.label}<span class="count tnum">{LIST_COUNTS[l.key]}</span></button>
+        ))}
+        <button type="button" role="tab" class="tab" data-more data-menu="m-more" aria-haspopup="menu" aria-selected="false"><span data-more-label>More</span><Icon name="chevron-down" size={12} /></button>
+      </div>
+      <button type="button" class="tm-trig c-listmenu" data-menu="m-lists" aria-haspopup="menu" aria-label="Choose a client list"><span data-list-label>All</span><span class="muted tnum" data-list-n>{LIST_COUNTS.all}</span><Icon name="chevron-down" size={16} /></button>
+      <div class="c-cluster">
+        <button type="button" class="chip filter-btn" id="c-filter" aria-pressed="false" aria-label="Filter clients" title="Search, or filter by stylist, service, source or consent"><Icon name="list-filter" size={14} /><span class="chip-t">Filter</span></button>
+        <button type="button" class="icon-btn" data-menu="m-display" aria-label="Display options" aria-haspopup="menu"><Icon name="sliders-horizontal" size={16} /></button>
+        <div class="seg" role="group" aria-label="Layout">
+          <button type="button" data-mode="list" aria-pressed="true" aria-label="List"><Icon name="layout-list" size={13} /><span class="hide-m">List</span></button>
+          <button type="button" data-mode="board" aria-pressed="false" aria-label="Board"><Icon name="columns-3" size={13} /><span class="hide-m">Board</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="c-bar" id="c-filter-row" hidden>
+      <label class="c-search"><Icon name="search" size={14} /><input type="search" class="c-input" data-search placeholder="Search clients" aria-label="Search clients" autocomplete="off" /></label>
+      <button type="button" class="chip" data-menu="m-stylist" data-chip="stylist" aria-haspopup="menu"><Icon name="plus" size={13} /><span data-chip-label>Stylist</span></button>
+      <button type="button" class="chip" data-menu="m-svc" data-chip="svc" aria-haspopup="menu"><Icon name="plus" size={13} /><span data-chip-label>Service</span></button>
+      <button type="button" class="chip" data-menu="m-src" data-chip="src" aria-haspopup="menu"><Icon name="plus" size={13} /><span data-chip-label>Source</span></button>
+      <button type="button" class="chip" data-menu="m-consent" data-chip="consent" aria-haspopup="menu"><Icon name="plus" size={13} /><span data-chip-label>Consent</span></button>
+      <button type="button" class="btn btn-sm btn-quiet" data-clear-filters hidden>Clear filters</button>
+    </div>
+
+    <div class="bulk" data-bulk hidden>
+      <span class="strong tnum"><span data-sel-n>0</span> selected</span>
+      <button type="button" class="btn btn-sm" data-bulk="text"><Icon name="message-square" size={13} />Text</button>
+      <button type="button" class="btn btn-sm" data-bulk="winback"><Icon name="repeat" size={13} />Add to win-back</button>
+      <button type="button" class="btn btn-sm" data-menu="m-seq" aria-haspopup="menu"><Icon name="list-ordered" size={13} />Add to sequence</button>
+      <button type="button" class="btn btn-sm" data-menu="m-tag" aria-haspopup="menu"><Icon name="tag" size={13} />Tag</button>
+      <button type="button" class="btn btn-sm btn-quiet" data-bulk="clear">Clear</button>
+    </div>
+
+    <div class="c-table" data-view-list>
+      <div class="row head crow" role="row">
+        <span class="cell"><input type="checkbox" class="check" data-select-all aria-label="Select all shown" /></span>
+        <span class="cell hide-m"></span>
+        <span class="cell">Name</span>
+        <span class="cell hide-m">Stage</span>
+        <span class="cell hide-m">Last visit</span>
+        <span class="cell hide-m">Next visit</span>
+        <span class="cell right hide-m">Avg ticket</span>
+        <span class="cell right">Lifetime</span>
+        <span class="cell hide-m">Stylist</span>
+        <span class="cell hide-m" title="Text consent">Texts</span>
+      </div>
+      <div data-out></div>
+      <div class="empty" data-empty hidden><strong>No clients match</strong><span>Try another smart list, or clear the filters.</span><button type="button" class="btn btn-sm" data-clear-filters>Clear filters</button></div>
+    </div>
+    <div class="board" data-board hidden></div>
+    <div data-pool hidden>{ROWS.map((r) => <ClientRow r={r} />)}</div>
+    <div class="menu" id="m-more" role="menu">{moreLists.map((l) => <button class="menu-item" role="menuitem" data-list={l.key} data-lbl={moreLabels[l.key] ?? l.label} title={l.hint}>{moreLabels[l.key] ?? l.label}<span class="muted tnum mi-n">{LIST_COUNTS[l.key]}</span></button>)}</div>
+    <div class="menu" id="m-lists" role="menu">{LISTS.map((l) => <button class="menu-item" role="menuitem" data-list={l.key} data-lbl={l.label} title={l.hint}>{l.label}<span class="muted tnum mi-n">{LIST_COUNTS[l.key]}</span></button>)}</div>
+    <template id="lc-icons">{['active', 'at_risk', 'lapsed', 'prospect'].map((k) => <span data-lc={k}><StatusIcon state={k} /></span>)}</template>
+    <template id="chev"><Icon name="chevron-down" size={14} class="chev" /></template>
+
+    <div class="menu" id="m-stylist" role="menu"><div class="menu-head">Stylist</div><button class="menu-item" role="menuitem" data-f="stylist" data-v="">Any stylist</button>{STYLIST_OPTS.map(([v, l]) => <button class="menu-item" role="menuitem" data-f="stylist" data-v={v}>{l}</button>)}</div>
+    <div class="menu" id="m-svc" role="menu"><div class="menu-head">Preferred service</div><button class="menu-item" role="menuitem" data-f="svc" data-v="">Any service</button>{SERVICE_OPTS.map(([v, l]) => <button class="menu-item" role="menuitem" data-f="svc" data-v={v}>{l}</button>)}</div>
+    <div class="menu" id="m-src" role="menu"><div class="menu-head">Where they came from</div><button class="menu-item" role="menuitem" data-f="src" data-v="">Any source</button>{SOURCE_OPTS.map(([v, l]) => <button class="menu-item" role="menuitem" data-f="src" data-v={v}>{l}</button>)}</div>
+    <div class="menu" id="m-consent" role="menu"><div class="menu-head">Text consent</div>
+      <button class="menu-item" role="menuitem" data-f="consent" data-v="">Any</button>
+      <button class="menu-item" role="menuitem" data-f="consent" data-v="yes">Agreed to texts</button>
+      <button class="menu-item" role="menuitem" data-f="consent" data-v="promo">Agreed to promotional texts</button>
+      <button class="menu-item" role="menuitem" data-f="consent" data-v="no">No text consent</button></div>
+    <div class="menu" id="m-display" role="menu">
+      <div class="menu-head">Group by</div>
+      {groupOpts.map(([v, l]) => <button class="menu-item" role="menuitemradio" aria-checked="false" data-grp={v}><Icon name="check" size={14} class="tick" />{l}</button>)}
+      <div class="menu-sep"></div>
+      <div class="menu-head">Order by</div>
+      {orderOpts.map(([v, l]) => <button class="menu-item" role="menuitemradio" aria-checked="false" data-ord={v}><Icon name="check" size={14} class="tick" />{l}</button>)}
+    </div>
+    <div class="menu" id="m-seq" role="menu"><div class="menu-head">Add to sequence</div>
+      <button class="menu-item" role="menuitem" data-seq="Rebook reminder">Rebook reminder</button>
+      <button class="menu-item" role="menuitem" data-seq="Win-back, 3 steps">Win-back, 3 steps</button>
+      <button class="menu-item" role="menuitem" data-seq="Birthday note">Birthday note</button></div>
+    <div class="menu" id="m-tag" role="menu"><div class="menu-head">Add tag</div>
+      <button class="menu-item" role="menuitem" data-tag="VIP follow-up">VIP follow-up</button>
+      <button class="menu-item" role="menuitem" data-tag="Bridal">Bridal</button>
+      <button class="menu-item" role="menuitem" data-tag="Needs consult">Needs consult</button></div>
+  </div>
+</AppShell>
+
+<script>import '../../scripts/clients.ts';</script>
+
+<style is:global>
+  .clients { display: grid; gap: var(--s-3); max-width: 1280px; }
+  .c-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
+  .c-top > * { min-width: 0; } .c-top .t-meta { flex: 1 1 260px; }
+  .c-title { display: grid; gap: 2px; }
+  .consent-ic { display: inline-grid; place-items: center; width: 24px; height: 24px; }
+  .consent-ic.ok { color: var(--ink-3); } .consent-ic.off { color: var(--ink-4); }
+  .state-icon[aria-label="Active"] circle { fill: var(--ink-3); }
+  .c-sub { flex: 1 1 260px; margin: 0; } .c-sub strong { color: var(--ink); }
+  .c-cap { display: block; font-size: var(--t-12); margin-top: 2px; }
+  .mi-n { margin-left: auto; padding-left: var(--s-4); font-size: var(--t-12); }
+  .c-lists .tab[data-more] svg { margin-left: 2px; }
+  .c-listmenu { display: none; }
+  .tm-trig { align-items: center; justify-content: space-between; gap: var(--s-2); min-height: 44px; padding: 0 var(--s-3); border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); font-size: var(--t-14); font-weight: 600; color: var(--ink); text-align: left; }
+  .tm-trig svg { color: var(--ink-3); flex: none; } .tm-trig[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
+  .group-head .state-icon { flex: none; }
+  .c-title p { display: flex; align-items: center; gap: 6px; }
+  .c-title p svg { color: var(--ink-3); }
+  .c-title strong { color: var(--ink); }
+  .c-band { display: flex; align-items: center; gap: var(--s-3); border-bottom: 1px solid var(--line); padding-bottom: var(--s-2); min-width: 0; }
+  .c-lists { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; min-width: 0; flex: 1 1 auto; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent); padding-right: 24px; }
+  .c-lists .tab { flex: none; }
+  .c-cluster { display: flex; align-items: center; gap: var(--s-1); flex: none; }
+  .c-cluster .shown { margin-right: var(--s-2); }
+  .filter-btn { border-style: solid; border-color: var(--line); }
+  .filter-btn[aria-pressed="true"] { border-color: var(--violet-soft); background: var(--violet-wash); color: var(--violet-deep); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .consent-ic.m { display: none; }
+  .c-bar .grow { flex: 1; }
+  .c-search { display: flex; align-items: center; gap: 6px; height: 30px; width: 220px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--sunken); color: var(--ink-3); }
+  .c-search:focus-within { border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-wash); }
+  .c-input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: var(--t-13); }
+  .chip[aria-pressed="true"] svg:first-child { display: none; }
+  .bulk { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; padding: 6px var(--s-3); background: var(--select); border-radius: var(--r-md); position: sticky; top: 60px; z-index: 5; }
+  .bulk[hidden] { display: none; }
+  .menu-item .tick { visibility: hidden; }
+  .menu-item[aria-checked="true"] .tick { visibility: visible; color: var(--violet); }
+  .crow { --cols: 28px 22px minmax(190px, 1.7fr) 84px 96px 112px 80px 92px 110px 84px; }
+  @media (min-width: 901px) and (max-width: 1320px) { .crow { --cols: 28px 22px minmax(170px, 1.7fr) 84px 96px 112px 92px 84px; } .crow > :nth-child(7), .crow > :nth-child(9) { display: none; } }
+  .crow .check { cursor: pointer; }
+  .cname { gap: var(--s-2); }
+  .cname-text { display: grid; min-width: 0; }
+  .cname .name { max-width: 100%; }
+  .cname .name:hover { color: var(--violet-deep); }
+  .tags { display: flex; gap: 4px; flex: none; }
+  .c-table .row.head { position: static; }
+  .group-head .chev { flex: none; }
+  .lc-m { display: none; }
+
+  .board { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 0; border-top: 1px solid var(--line); overflow-x: auto; }
+  .b-col { border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; }
+  .b-col:last-child { border-right: 0; }
+  .b-head { display: flex; align-items: baseline; gap: var(--s-2); padding: 10px var(--s-3); border-bottom: 1px solid var(--line); background: var(--sunken); font-size: var(--t-13); font-weight: 600; }
+  .b-head .count { color: var(--ink-3); font-weight: 500; }
+  .b-head .sum { margin-left: auto; color: var(--ink-2); }
+  .b-card { display: grid; gap: 2px; padding: 10px var(--s-3); border-bottom: 1px solid var(--line); font-size: var(--t-12); color: var(--ink-3); }
+  .b-card:hover { background: var(--hover); }
+  .b-card .name { color: var(--ink); font-weight: 600; font-size: var(--t-13); }
+  .b-card .line { display: flex; justify-content: space-between; gap: var(--s-2); }
+  .b-more { padding: 10px var(--s-3); font-size: var(--t-12); color: var(--ink-3); }
+
+  @media (max-width: 900px) {
+    .crow { --cols: 28px minmax(0, 1fr) 76px; }
+    .lc-m { display: inline-flex !important; }
+    .clients { padding: 0; }
+    .c-search { width: 100%; flex: 1 0 100%; height: 44px; padding: 0 12px; }
+    .c-bar { flex-wrap: wrap; overflow: visible; }
+    .c-bar .btn, .c-bar .chip, .c-bar .icon-btn { min-height: 44px; }
+    .c-band { flex-direction: row; gap: 0; margin: 0 calc(var(--s-4) * -1); padding: 0 0 var(--s-2) 0; }
+    .c-cluster { display: contents; }
+    .c-cluster .filter-btn { order: 2; width: 44px; min-height: 44px; padding: 0; justify-content: center; margin-left: var(--s-2); margin-right: var(--s-4); }
+    .c-cluster .filter-btn .chip-t, .c-cluster .shown { display: none; }
+    .c-cluster .icon-btn { display: none; }
+    .c-cluster .seg { display: none; }
+    .c-lists { display: none; }
+    .c-listmenu { display: flex; flex: 1; min-width: 0; margin-left: var(--s-4); gap: var(--s-2); }
+    .c-listmenu [data-list-label] { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .c-top { flex-wrap: nowrap; gap: var(--s-3); } .c-top .t-meta { font-size: var(--t-12); } .c-top .t-meta svg { margin-top: 2px; flex: none; } .c-top .btn-black { flex: none; }
+    .crow { --cols: minmax(0, 1fr) auto; }
+    .crow .cell:first-child, .c-table .row.head .cell:first-child { display: none; }
+    .c-table .row.head { display: none; }
+    .c-cluster .filter-btn { flex: none; }
+    .consent-ic.m { display: inline-grid; width: 18px; height: 18px; }
+    .crow .life { display: flex; align-items: center; gap: var(--s-2); justify-content: flex-end; }
+    .bulk { top: 52px; }
+    .cname .name { font-size: var(--t-14); }
+    .cname .sub { font-size: var(--t-12); }
+    .board { grid-template-columns: repeat(5, 240px); }
+  }
+</style>

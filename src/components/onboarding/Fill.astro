@@ -1,0 +1,30 @@
+---
+// A section card whose fields come from a file or connection. Until that source is in, it shows what to add instead of empty fields.
+import Icon from '../Icon.astro';
+import { src, type SourceId } from '../../data/onboarding.ts';
+interface Props { title: string; sub?: string; need?: SourceId[]; class?: string }
+const { title, sub, need = [], class: cls = '' } = Astro.props;
+const srcs = need.map(src);
+const ask = srcs.map((s) => s.ask);
+const askText = ask.length > 1 ? `${ask.slice(0, -1).join(', ')} and ${ask[ask.length - 1]}` : ask[0];
+---
+<section class={`ob-card ob-fill ${cls}`} data-need={need.join(',')} data-ready={need.length ? 'false' : 'true'}>
+  <header class="ob-card-head">
+    <div><h2 class="t-head">{title}</h2>{sub && <p class="t-meta">{sub}</p>}</div>
+    <slot name="head" />
+  </header>
+  <div class="ob-fill-body"><slot /></div>
+  {need.length > 0 && (
+    <div class="ob-fill-empty">
+      <span class="ob-fill-ic"><Icon name={srcs[0].icon} size={18} /></span>
+      <div class="ob-fill-copy">
+        <strong>Prism fills this from {askText}</strong>
+        <span class="t-small muted">{srcs.map((s) => s.why).join(' ')}</span>
+      </div>
+      <div class="ob-fill-acts">
+        {srcs.map((s) => <button type="button" class="btn btn-primary btn-sm" data-pick={s.id} data-need-one={s.id}><Icon name={s.kind === 'file' ? 'upload' : 'link'} size={14} />{s.kind === 'file' ? `Upload ${s.ask.replace(/^your /, '')}` : `Connect ${s.ask.replace(/^your /, '')}`}</button>)}
+        <button type="button" class="btn btn-quiet btn-sm" data-manual>Type it in instead</button>
+      </div>
+    </div>
+  )}
+</section>

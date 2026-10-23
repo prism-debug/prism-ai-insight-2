@@ -1,0 +1,22 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import StatusIcon from '../StatusIcon.astro';
+import { NOW } from '../../data/clock.ts';
+import { waitShort, isUrgent } from '../../data/leads.ts';
+import { CHANNEL_ICON, CHANNEL_LABEL, STATUS_LABEL, groupOf, type Row } from '../../data/inbox.ts';
+interface Props { row: Row; selected?: boolean }
+const { row, selected = false } = Astro.props;
+const l = row.lead;
+const waiting = row.unread ? `waiting ${waitShort(NOW - row.last.at)}` : '';
+---
+<button type="button" class="trow" role="option" data-thread={row.id} data-filters={row.filters.join(' ')} data-text={`${l.name} ${row.lastText}`.toLowerCase()} data-ts={row.ts} data-status={l.status} data-group={groupOf(row)} data-unread={row.unread ? '1' : '0'} data-recent={row.recent ? '1' : '0'} aria-selected={selected ? 'true' : 'false'}>
+  <span class="t-st" title={STATUS_LABEL[l.status]}><StatusIcon state={l.status} size={14} /></span>
+  <span class="t-av"><Avatar name={l.name} size="md" /><span class="t-chan" title={CHANNEL_LABEL[row.chan]}><Icon name={CHANNEL_ICON[row.chan] ?? 'message-square'} size={10} /></span></span>
+  <span class="t-main">
+    <span class="t-top"><span class="t-name truncate">{l.name}</span><span class={`t-time tnum ${waiting && isUrgent(l) ? 'late' : ''}`} title={`Last message ${row.time}`} data-clock={row.time}>{waiting || row.time}</span></span>
+    <span class="t-bot"><span class="t-prev truncate">{row.lastText}</span>
+      <span class="t-ind"><span class="unread-dot" aria-label="Unread" hidden={!row.unread}></span></span>
+    </span>
+  </span>
+</button>

@@ -1,0 +1,42 @@
+@import "@fontsource-variable/albert-sans";
+@import "./tokens.css";
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--canvas); color: var(--ink);
+  font: 400 var(--t-14)/1.45 var(--font); 
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4, p, ul, ol, figure, dl, dd { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+img, svg { display: block; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* browser surfaces, themed (craft floor) */
+::selection { background: var(--violet-soft); color: var(--ink); }
+:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; border-radius: var(--r-sm); }
+input, textarea { caret-color: var(--violet); }
+.num, td.num, .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "cv11"; }
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+.prose a { text-decoration: underline; text-decoration-color: var(--violet-soft); text-underline-offset: 3px; }
+
+/* type */
+.t-title { font-size: var(--t-22); line-height: 1.25; font-weight: 600; letter-spacing: -0.015em; }
+.t-verdict { font-size: var(--t-28); line-height: 1.18; font-weight: 600; letter-spacing: -0.025em; text-wrap: balance; }
+.t-head { font-size: var(--t-14); font-weight: 600; letter-spacing: -0.005em; }
+.t-body { font-size: var(--t-14); }
+.t-small { font-size: var(--t-12); }
+.t-meta { font-size: var(--t-12); color: var(--ink-3); }
+.muted { color: var(--ink-3); }
+.strong { font-weight: 600; }
+.mono { font-variant-numeric: tabular-nums; }
+.measure { max-width: 68ch; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }

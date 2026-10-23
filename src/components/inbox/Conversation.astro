@@ -1,0 +1,98 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import StatusIcon from '../StatusIcon.astro';
+import CallEvent from './CallEvent.astro';
+import { CHANNEL_ICON, CHANNEL_LABEL, STATUS_LABEL, TEMPLATES, SCHEDULES, QUIET, suggestion, apptOf, type Row } from '../../data/inbox.ts';
+import { NOW, dayIndex } from '../../data/clock.ts';
+import { service, stylist } from '../../data/salon.ts';
+import { clock, dayShort, first } from '../../lib/format.ts';
+interface Props { row: Row; hidden?: boolean }
+const { row, hidden = true } = Astro.props;
+const l = row.lead; const f = first(l.name);
+const appt = apptOf(l);
+const smsLike = ['sms', 'phone', 'form', 'walk_in'].includes(row.chan);
+const canSend = smsLike ? l.consentSms : true;
+const tabLabel = smsLike ? 'Text' : row.chan === 'email' ? 'Email' : CHANNEL_LABEL[row.chan];
+const sug = suggestion(row);
+const isJoy = l.status === 'joy_handling';
+const day = (t: number) => { const d = dayIndex(NOW) - dayIndex(t); return d <= 0 ? 'Today' : d === 1 ? 'Yesterday' : dayShort(t); };
+const teamName = (text: string) => /Tamsin/.test(text) ? 'Tamsin Ortiz' : /Devon/.test(text) ? 'Devon Park' : 'Tamsin Ortiz';
+let lastDay = '';
+const items = row.thread.messages.map((m) => { const d = day(m.at); const sep = d !== lastDay ? d : ''; lastDay = d; return { m, sep }; });
+const handle = row.chan === 'instagram' ? l.ig : row.chan === 'email' ? l.email : l.phone;
+---
+<section class="convo" data-conv={row.id} data-joy={isJoy ? '1' : '0'} data-consent={canSend ? '1' : '0'} data-first={f} hidden={hidden} aria-label={`Conversation with ${l.name}`}>
+  <header class="c-head">
+    <button type="button" class="icon-btn only-m" data-back aria-label="Back to all conversations"><Icon name="chevron-left" size={20} /></button>
+    <Avatar name={l.name} size="md" />
+    <div class="c-who"><h2 class="t-head truncate">{l.name}</h2><span class="t-meta truncate"><Icon name={CHANNEL_ICON[row.chan] ?? 'message-square'} size={12} /> {CHANNEL_LABEL[row.chan]} · {handle}</span></div>
+    <div class="c-actions">
+      <button type="button" class={`btn btn-sm ${isJoy ? '' : 'btn-dash'}`} data-joy-toggle><Icon name={isJoy ? 'circle-pause' : 'sparkles'} size={13} /><span data-joy-label>{isJoy ? 'Pause Joy' : 'Hand back to Joy'}</span></button>
+      <button type="button" class="icon-btn det-btn" data-open-details aria-label="Details"><Icon name="panel-right-open" size={16} /></button>
+    </div>
+  </header>
+  <div class="c-state" data-state-line>
+    <StatusIcon state={l.status} size={13} />
+    <span data-state-text>
+      {l.status === 'needs_person' ? <><strong>Needs a person.</strong> Joy handed this over: {l.handoffReason}.</> : isJoy ? <><strong>Joy is handling this.</strong> She replies within a minute and hands over when unsure.</> : l.status === 'not_answered' ? <><strong>Not answered.</strong> {f} has been waiting since {clock(l.lastInboundAt)}.</> : <>{STATUS_LABEL[l.status]}.</>}
+    </span>
+  </div>
+
+  <div class="c-scroll" data-scroll>
+    <div class="c-log" data-log>
+      {items.map(({ m, sep }) => (
+        <>
+          {sep && <div class="day"><span>{sep}</span></div>}
+          {m.kind === 'call' && row.call ? (
+            <CallEvent call={row.call} name={l.name} at={clock(m.at)} consent={canSend} />
+          ) : m.by === 'system' && m.kind === 'handoff' ? (
+            <div class="sysline handoff"><Icon name="user-round" size={13} /><span><strong>Joy handed this to the team.</strong> Reason: {l.handoffReason}. <span class="muted tnum">{clock(m.at)}</span></span></div>
+          ) : m.by === 'system' ? (
+            <div class="sysline booking"><Icon name="calendar-check" size={13} /><span><strong>{m.text}</strong>{appt && <> · {stylist(appt.stylistId).name.split(' ')[0]} · {dayShort(appt.start)}, {clock(appt.start)}</>} <span class="muted tnum">{clock(m.at)}</span></span></div>
+          ) : (
+            <div class={`msg ${m.by === 'guest' ? 'in' : m.by}`}>
+              {m.by === 'guest' ? <Avatar name={l.name} size="sm" /> : m.by === 'joy' ? <Avatar kind="joy" size="sm" /> : <Avatar name={teamName(m.text)} size="sm" />}
+              <div class="bub">
+                {m.kind === 'form' && <span class="bub-tag"><Icon name="file-text" size={12} />Website form</span>}
+                <p>{m.text}</p>
+                <span class="mt tnum">{m.by === 'joy' ? 'Joy' : m.by === 'team' ? teamName(m.text).split(' ')[0] : f} · {clock(m.at)}</span>
+              </div>
+            </div>
+          )}
+        </>
+      ))}
+    </div>
+  </div>
+
+  <footer class="composer" data-composer>
+    {sug && (
+      <div class="dash-sug" data-sug>
+        <span class="avatar dash sm" title="Dash"><img src="/brand/dash-mark.svg" alt="" /></span>
+        <p><strong>Dash suggests</strong> {sug}</p>
+        <button type="button" class="btn btn-sm btn-dash" data-use-sug data-text={sug}>Use reply</button>
+      </div>
+    )}
+    <div class="comp-tabs" role="tablist" aria-label="Reply type">
+      <button type="button" role="tab" aria-selected="true" data-mode="reply" class="tab">{tabLabel}</button>
+      <button type="button" role="tab" aria-selected="false" data-mode="note" class="tab">Note</button>
+      <span class="chips-row">
+        {TEMPLATES.map((t) => <button type="button" class="chip" data-tpl={t.text}>{t.label}</button>)}
+      </span>
+    </div>
+    <textarea class="textarea" data-input rows="2" placeholder={canSend ? `Reply to ${f}` : `Texts to ${f} are off. Add a note or call instead.`} aria-label={`Reply to ${l.name}`} disabled={!canSend}></textarea>
+    <div class="comp-foot">
+      <p class={`consent t-small ${canSend ? '' : 'bad'}`} data-consent-line data-ok={smsLike ? `Texting ${l.phone} · consent on file · quiet hours ${QUIET.from} to ${QUIET.to}, so this sends now` : `Replying in ${CHANNEL_LABEL[row.chan]} to ${handle}`} data-no={`No text consent for ${f}. Texts are blocked until they opt in.`} data-note="Notes are only seen by your team. Nothing is sent to the guest.">
+        <Icon name={canSend ? 'shield-check' : 'bell-off'} size={13} /><span data-consent-text>{canSend ? (smsLike ? `Texting ${l.phone} · consent on file · quiet hours ${QUIET.from} to ${QUIET.to}, so this sends now` : `Replying in ${CHANNEL_LABEL[row.chan]} to ${handle}`) : `No text consent for ${f}. Texts are blocked until they opt in.`}</span>
+      </p>
+      <div class="send-group">
+        <button type="button" class="btn btn-sm btn-quiet" data-menu={`sched-${row.id}`} aria-label="Schedule send" aria-haspopup="menu"><Icon name="clock" size={13} />Send later</button>
+        <button type="button" class="btn btn-primary" data-send disabled={!canSend}><Icon name="send" size={14} /><span data-send-label>Send</span></button>
+      </div>
+    </div>
+    <div class="menu" id={`sched-${row.id}`} role="menu">
+      <div class="menu-head">Send later</div>
+      {SCHEDULES.map((s) => <button type="button" role="menuitem" class="menu-item" data-sched={s.label}><Icon name="clock" size={15} />{s.label}</button>)}
+    </div>
+  </footer>
+</section>

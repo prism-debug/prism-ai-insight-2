@@ -1,0 +1,106 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import ListTools from '../components/ListTools.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import { CONNECTORS, type Connector } from '../data/settings.ts';
+
+const groupOf = (c: Connector) => (c.state === 'warn' ? 'attn' : c.state === 'off' ? 'off' : 'on');
+const groups = [
+  { id: 'attn', title: 'Needs attention' }, { id: 'on', title: 'Connected' }, { id: 'off', title: 'Not connected' },
+].map((g) => ({ ...g, rows: CONNECTORS.filter((c) => groupOf(c) === g.id) }));
+const statusOf = (c: Connector) => (c.state === 'connected' ? `Connected, checked ${c.checked}` : c.health);
+const icon = (s: string) => (s === 'warn' ? 'at_risk' : s === 'off' ? 'off' : 'connected');
+---
+<AppShell title="Connectors" active="connectors" description="The systems PRISM reads from and talks through, with their health and what each is allowed to do.">
+  <div class="cn" id="cn">
+    <header class="tm-head"><div><h1 class="t-title">Connectors</h1><p class="t-meta hide-m">PRISM never shows sign-in details. Reconnecting opens the provider's own sign-in page.</p></div><ListTools label="connectors" /></header>
+    <div class="list cn-list">
+      {groups.map((g) => (
+        <div class="group" data-group={g.id} hidden={g.rows.length === 0}>
+          <button type="button" class="group-head"><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg><span>{g.title}</span><span class="count">{g.rows.length}</span></button>
+          <div class="group-body">
+            {g.rows.map((c) => (
+              <div class="cx" data-cx={c.id} data-state={c.state}>
+                <button type="button" class="row cx-row" aria-expanded="false" aria-controls={`cx-${c.id}`}>
+                  <span class="cx-logo"><Icon name={c.icon} size={15} /></span>
+                  <span class="cx-nm"><span class="name">{c.name}</span><span class="sub cx-what">{c.what}</span></span>
+                  <span class="cx-st"><span class="cx-ic" data-cx-icon><StatusIcon state={icon(c.state)} size={15} /></span><span class="cx-hl" data-cx-health>{statusOf(c)}</span></span>
+                  <Icon name="chevron-down" size={15} class="cx-chev" />
+                </button>
+                <span class="cx-act" data-cx-act>
+                  {c.plan ? <a class="btn btn-sm" href="/settings#plan">See plan</a> : c.state === 'warn' ? <button type="button" class="btn btn-sm" data-cx-reconnect data-cx-main>Reconnect</button>
+                    : c.state === 'off' ? <button type="button" class="btn btn-sm" data-cx-connect data-cx-main>Connect</button>
+                    : <><button type="button" class="icon-btn cx-menu-btn" data-menu={`cxm-${c.id}`} aria-haspopup="menu" aria-expanded="false" aria-label={`More actions for ${c.name}`}><Icon name="ellipsis" size={16} /></button>
+                      <div class="menu" id={`cxm-${c.id}`} role="menu"><button type="button" role="menuitem" class="menu-item" data-cx-disconnect>{c.id === 'phorest' ? 'Disconnect (Bookings depends on this)' : 'Disconnect'}</button></div></>}
+                </span>
+                <div class="cx-more" id={`cx-${c.id}`} hidden>
+                  <div class="cx-col">
+                    <div class="props-title">{c.readOnly ? 'Allowed (read-only)' : 'Allowed'}</div>
+                    <div class="cx-scopes">{c.scopes.map((s) => <span class="tag">{s}</span>)}</div>
+                    {c.parts && (<><div class="props-title">Parts</div>
+                      <ul class="cx-parts">{c.parts.map((p) => <li><StatusIcon state={icon(p.state)} size={13} /><span><b>{p.name}</b> <span class="muted">{p.note}</span></span></li>)}</ul></>)}
+                    {c.offNote && <p class="t-small muted" style="margin-top:var(--s-3)">{c.offNote}</p>}
+                  </div>
+                  <div class="cx-col">
+                    <div class="props-title">Last 5 events</div>
+                    {c.events.length ? <ul class="cx-ev">{c.events.map((e) => <li><span class="tnum muted">{e.t}</span><span>{e.text}</span>{!e.ok && <span class="tag watch">Warning</span>}</li>)}</ul> : <p class="t-small muted">Nothing yet. It starts when you connect.</p>}
+                  </div>
+                  <div class="cx-acts">
+                    {c.state !== 'off' ? (<>
+                      <button type="button" class="btn btn-sm" data-cx-test>Test connection</button>
+                      <button type="button" class="btn btn-sm" data-cx-reconnect>Reconnect</button>
+                    </>) : c.plan ? <a class="btn btn-sm" href="/settings#plan">See plan</a> : <button type="button" class="btn btn-sm" data-cx-connect>Connect {c.name}</button>}
+                    {c.readOnly && <span class="t-small muted">PRISM only reads from {c.name}. Booking changes happen after you approve them.</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+  <script>import '../scripts/settings.ts';</script>
+</AppShell>
+
+<style is:global>
+  .cn .t-title { font-size: 20px; }
+  .cn { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); max-width: 1100px; }
+  .cn-list { border-top: 1px solid var(--line); }
+  .tm-head { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s-4); } .unsaved { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); white-space: nowrap; }
+  .cx { border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: center; }
+  .cx .cx-row { width: 100%; text-align: left; border-bottom: 0; --cols: 28px minmax(0, 1.1fr) minmax(0, 1.3fr) 24px; min-height: 52px; padding-right: var(--s-2); }
+  .cx .cx-row:hover { background: var(--hover); }
+  .cx-ic { display: inline-flex; flex: none; margin-top: 1px; }
+  .cx-st { display: flex; align-items: flex-start; gap: var(--s-2); min-width: 0; }
+  .cx-nm { flex-direction: column; align-items: flex-start; gap: 0; }
+  .cx-nm { display: flex; min-width: 0; }
+  .cx-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .cx-hl { min-width: 0; }
+  .cx-act { padding-right: var(--s-4); display: flex; justify-content: flex-end; }
+  .cx-act .btn { white-space: nowrap; } .cx-act .icon-btn { color: var(--ink-3); }
+  .cx-hl { white-space: normal; line-height: 1.35; padding-right: var(--s-2); font-size: var(--t-12); } .cx-act .btn-quiet { border-color: var(--line-strong); }
+  .cx-more { grid-column: 1 / -1; }
+  .cx-logo { width: 28px; height: 28px; border-radius: var(--r-md); background: var(--violet-wash); color: var(--violet-deep); display: grid; place-items: center; flex: none; }
+  .cx[data-state="warn"] .cx-hl { color: var(--ink-2); } .cx[data-state="off"] .cx-hl { color: var(--ink-3); }
+  .cx-chev { transition: transform var(--dur) var(--ease); color: var(--ink-3); } .cx-row[aria-expanded="true"] .cx-chev { transform: rotate(180deg); }
+  .cx-more { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-2) var(--s-8); padding: var(--s-2) var(--s-4) var(--s-4) 56px; background: var(--surface); }
+  .cx-more[hidden] { display: none; }
+  .cx-scopes { display: flex; flex-wrap: wrap; gap: 6px; } .cx-scopes .tag { height: auto; min-height: 20px; padding: 2px 7px; white-space: normal; }
+  .cx-parts, .cx-ev { display: grid; gap: 0; } .cx-parts li { display: flex; gap: var(--s-2); align-items: flex-start; padding: 5px 0; font-size: var(--t-13); } .cx-parts .state-icon { margin-top: 3px; }
+  .cx-ev li { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: var(--s-3); padding: 5px 0; border-bottom: 1px solid var(--line); font-size: var(--t-12); align-items: center; } .cx-ev li:last-child { border-bottom: 0; }
+  .cx-acts { grid-column: 1 / -1; display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; padding-top: var(--s-3); }
+  .cx-acts .btn.busy { opacity: .6; pointer-events: none; }
+  @media (max-width: 900px) {
+    .cx .cx-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); grid-template-areas: "lg nm" "lg wh" "lg st"; column-gap: var(--s-2); row-gap: 1px; align-items: center; padding: 10px var(--s-2) 10px var(--s-4); min-height: 60px; padding-bottom: 8px; }
+    .cx-nm { display: contents; } .cx-nm .name { grid-area: nm; } .cx-nm .cx-what { grid-area: wh; display: block; }
+    .cx-st { grid-area: st; } .cx-logo { grid-area: lg; align-self: start; margin-top: 2px; } .cx-hl { grid-area: hl; font-size: var(--t-12); color: var(--ink-3); white-space: normal; } .cx-chev { display: none; }
+    .cx-what { font-size: var(--t-12); white-space: normal; }
+    .cx:has(.cx-menu-btn) { grid-template-columns: minmax(0, 1fr) 52px; } .cx:has(.cx-menu-btn) .cx-act { grid-column: 2; grid-row: 1; padding: 0 var(--s-2) 0 0; justify-content: center; } .cx:has(.cx-menu-btn) .cx-row { grid-column: 1; grid-row: 1; }
+    .cx[data-state="warn"] .cx-hl { color: var(--watch); }
+    .cx { grid-template-columns: minmax(0, 1fr); } .cx-act { padding: 0 var(--s-4) 12px 52px; justify-content: flex-start; } .cx-act .btn { min-height: 44px; width: auto; min-width: 0; padding: 0 16px; } .cx-act .icon-btn { min-width: 44px; min-height: 44px; }
+    .cx-more { grid-template-columns: 1fr; padding: var(--s-2) var(--s-3) var(--s-4); }
+    .cx-ev li { grid-template-columns: 78px minmax(0, 1fr); } .cx-ev li .tag { display: none; }
+  }
+</style>

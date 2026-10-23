@@ -1,0 +1,8 @@
+---
+import Icon from '../Icon.astro';
+import { SRC_BADGE, type FactSrc } from '../../data/onboarding.ts';
+interface Props { src: FactSrc }
+const b = SRC_BADGE[Astro.props.src];
+const kind = Astro.props.src === 'website' ? 'web' : Astro.props.src === 'phorest' ? 'sys' : Astro.props.src === 'answer' ? 'you' : 'file';
+---
+<span class={`ob-src ${kind}`}><Icon name={b.icon} size={11} />{b.label}</span>

@@ -1,0 +1,20 @@
+---
+import { FUNNEL } from '../../data/retention.ts';
+import { pct0 } from '../../lib/format.ts';
+const max = Math.max(...FUNNEL.map((f) => f.reached));
+---
+<div class="list">
+  <div class="row head fn"><span class="cell">Stage</span><span class="cell hide-m">Reached it</span><span class="cell right">Clients</span><span class="cell right" title="Of everyone who reached this stage, the share who went on to the next one">Move up</span></div>
+  {FUNNEL.map((f) => (
+    <div class="row fn">
+      <span class="cell"><span class="truncate"><span class="name">{f.stage}</span> <span class="sub">{f.rule}</span></span></span>
+      <span class="cell hide-m"><span class="meter" tabindex="0" data-tip={`${f.stage}|Reached it~${f.reached} clients|Here now~${f.here}|${f.up === null ? 'Top stage' : `Moved up~${pct0(f.up)}`}|${f.rule}`} role="img" aria-label={`${f.reached} clients reached ${f.stage}`}><i style={`width:${(f.reached / max) * 100}%`}></i></span></span>
+      <span class="cell right tnum">{f.here}</span>
+      <span class="cell right tnum strong">{f.up === null ? <span class="muted" style="font-weight:400">Top</span> : pct0(f.up)}</span>
+    </div>
+  ))}
+</div>
+<style>
+  .fn { --cols: minmax(150px, 1.3fr) minmax(120px, 1fr) 56px 64px; }
+  @media (max-width: 900px) { .fn { --cols: minmax(0, 1fr) 52px 60px; } }
+</style>

@@ -1,0 +1,41 @@
+/* Guided demos: the 1 2 3 control in the top bar, the step card (it borrows .dg-card from the Dash tour), the
+   highlight, Demo 1's call note on Home and the resume pill. src/scripts/demo.ts drives all of it. */
+.demo-pick { display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 3px 0 11px; border: 1px solid var(--line-strong); border-radius: var(--r-pill); background: var(--surface); flex: none; }
+.demo-pick-label { font-size: var(--t-12); font-weight: 600; color: var(--ink-3); margin-right: 5px; }
+.demo-pick-btn { position: relative; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: var(--t-13); font-weight: 700; color: var(--ink); transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
+.demo-pick-btn:hover { background: var(--hover); }
+.demo-pick-btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.demo-pick-btn::after { content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-2px); padding: 5px 9px; border-radius: 8px; background: var(--ink); color: #fff; font-size: var(--t-12); font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 120ms, transform 120ms; z-index: 40; }
+.demo-pick-btn:hover::after, .demo-pick-btn:focus-visible::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.dm-tour { position: fixed; inset: 0; z-index: 300; pointer-events: none; }
+.dm-tour.modal { background: rgb(6 42 45 / .5); pointer-events: auto; }
+.dm-hl { position: fixed; border-radius: 14px; box-shadow: 0 0 0 100vmax rgb(6 42 45 / .45), 0 0 0 3px var(--action); pointer-events: none; opacity: 0; transition: top 240ms var(--ease), left 240ms var(--ease), width 240ms var(--ease), height 240ms var(--ease), opacity 160ms; }
+.dm-tour.modal .dm-hl { display: none; }
+.dm-card { pointer-events: auto; }
+.dm-tour.modal .dm-card { left: 50% !important; top: 50% !important; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 24px)) !important; right: auto !important; bottom: auto !important; transition: none; }
+.dm-tour.nomotion .dm-hl, .dm-tour.nomotion .dm-card { transition: none; }
+.dm-n { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--ink); color: var(--action); font-weight: 800; font-size: var(--t-16); flex: none; }
+body.dm-touring .dg { display: none; }
+
+.dm-note { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-5); padding: 12px 14px; border-radius: var(--r-lg); background: var(--joy-wash); border: 1px solid #F6D9BF; color: var(--ink); }
+.dm-note .avatar { --sz: 36px; flex: none; }
+.dm-note-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.dm-note-copy strong { font-size: var(--t-16); font-weight: 600; }
+.dm-note-copy span { font-size: var(--t-13); color: var(--joy-ink); }
+.dm-note-go { font-weight: 600; font-size: var(--t-14); white-space: nowrap; }
+.dm-note:hover .dm-note-go { text-decoration: underline; text-underline-offset: 3px; }
+
+.dm-resume { position: fixed; left: 16px; bottom: 16px; z-index: 250; display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; border-radius: var(--r-pill); background: var(--ink); color: #fff; font-weight: 600; font-size: var(--t-13); box-shadow: var(--float); }
+.dm-resume span { color: var(--action); }
+
+@media (max-width: 900px) {
+  .demo-pick { height: 32px; padding: 0 2px; }
+  .demo-pick-label { display: none; }
+  .demo-pick-btn { width: 26px; height: 26px; font-size: var(--t-12); }
+  .demo-pick-btn::after { display: none; }
+  .dm-card { max-height: 60dvh; overflow-y: auto; }
+  .dm-note { flex-wrap: wrap; }
+  .dm-note-go { width: 100%; padding-left: 48px; }
+  .dm-resume { bottom: calc(76px + env(safe-area-inset-bottom)); }
+}

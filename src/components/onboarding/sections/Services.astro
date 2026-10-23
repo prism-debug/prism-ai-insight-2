@@ -1,0 +1,43 @@
+---
+import Icon from '../../Icon.astro';
+import Fill from '../Fill.astro';
+import { SALON, SERVICES } from '../../../data/salon.ts';
+import { SERVICE_NOTES } from '../../../data/onboarding.ts';
+const pb = SALON.booking.system;
+---
+<Fill title={`Services from ${pb}`} need={['phorest']}>
+  <p class="ob-inline"><Icon name="lock" size={13} />Prices and durations are read-only from {pb}. Add instructions for how Joy handles each service.<span class="ob-inline-r t-small muted">Synced {SALON.booking.lastSync}</span></p>
+  <div class="ob-table-wrap">
+    <table class="ob-table">
+      <thead><tr><th>Service</th><th class="r">Price</th><th class="hide-m">Instructions for Joy</th><th>Check</th></tr></thead>
+      <tbody>
+        {SERVICES.map((s) => { const n = SERVICE_NOTES[s.id]; return (
+          <tr class={n?.check ? 'conflict' : ''} data-need={n?.check ? 'price,phorest' : undefined} data-flag={n?.check ? 'true' : undefined}>
+            <td class="name">{s.name}<small class="tnum">{s.minutes} min</small></td>
+            <td class="r tnum">{s.fromPrice ? 'from ' : ''}${s.price}</td>
+            <td class="hide-m">{n?.note ? <input class="input sm-w" value={n.note} aria-label={`Instruction for ${s.name}`} /> : <button type="button" class="ob-add-ins"><Icon name="plus" size={13} />Add instruction</button>}</td>
+            <td class="chk">
+              <span class={`ob-chk ${n?.check ? 'warn' : 'ok'}`} data-need="price" data-ready="false"><span class="when-on"><Icon name={n?.check ? 'triangle-alert' : 'check'} size={13} />{n?.check ?? 'Matches menu'}</span><span class="when-off">From {pb}</span></span>
+            </td>
+          </tr>
+        ); })}
+      </tbody>
+    </table>
+  </div>
+</Fill>
+
+<Fill title="What Joy can say about price">
+  <div class="ob-fields c2">
+    <div class="field"><span>Price wording</span>
+      <div class="ob-chips" data-single role="group" aria-label="Price wording">
+        <button type="button" class="chip" aria-pressed="false">Exact price</button>
+        <button type="button" class="chip" aria-pressed="true">Starting at</button>
+        <button type="button" class="chip" aria-pressed="false">Price range</button>
+        <button type="button" class="chip" aria-pressed="false">Ask for a consult</button>
+      </div>
+    </div>
+    <label class="ob-toggle"><span><strong>Quote colour corrections</strong><small>Off: Joy offers a consult instead of a price</small></span><input type="checkbox" class="switch" /></label>
+    <label class="ob-toggle"><span><strong>Suggest add-ons</strong><small>Joy may suggest a gloss or treatment with colour</small></span><input type="checkbox" class="switch" checked /></label>
+    <label class="ob-toggle"><span><strong>Mention deposits when quoting</strong><small>Pulled from Policies and booking rules</small></span><input type="checkbox" class="switch" checked /></label>
+  </div>
+</Fill>

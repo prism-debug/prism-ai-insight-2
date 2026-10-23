@@ -1,0 +1,28 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import Stars from './Stars.astro';
+---
+<aside class="side" id="rv" role="dialog" aria-modal="true" aria-label="Reply to a review" aria-hidden="true">
+  <div class="side-head">
+    <Avatar kind="dash" size="lg" />
+    <div style="flex:1;min-width:0"><div class="t-head">Reply to <span data-rv-name>a guest</span></div><div class="t-meta" data-rv-meta></div></div>
+    <button class="icon-btn" type="button" data-close-rv aria-label="Close"><Icon name="x" size={16} /></button>
+  </div>
+  <div class="side-body">
+    <section class="sblock" aria-label="The review">
+      <div class="rv-stars" data-rv-stars></div>
+      <p class="t-body" data-rv-text></p>
+    </section>
+    <section class="sblock" aria-label="Your reply">
+      <h3><label for="rv-reply">Dash’s draft reply <span class="muted" style="font-weight:400">· edit it before posting</span></label></h3>
+      <textarea class="textarea" id="rv-reply" rows="7"></textarea>
+      <p class="t-meta" data-rv-why></p>
+      <div class="radio-row"><button class="btn btn-sm" type="button" data-rv-redo><Icon name="refresh-cw" size={13} />Draft again</button></div>
+    </section>
+  </div>
+  <div class="side-foot">
+    <button class="btn btn-quiet" type="button" data-close-rv>Cancel</button>
+    <button class="btn btn-primary" type="button" data-rv-post>Post on Google</button>
+  </div>
+</aside>

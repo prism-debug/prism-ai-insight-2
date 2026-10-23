@@ -1,0 +1,29 @@
+---
+import '../../styles/onboarding.css';
+import AppShell from '../../layouts/AppShell.astro';
+import SectionLayout from '../../components/onboarding/SectionLayout.astro';
+import Basics from '../../components/onboarding/sections/Basics.astro';
+import Brand from '../../components/onboarding/sections/Brand.astro';
+import Voice from '../../components/onboarding/sections/Voice.astro';
+import Services from '../../components/onboarding/sections/Services.astro';
+import Team from '../../components/onboarding/sections/Team.astro';
+import Policies from '../../components/onboarding/sections/Policies.astro';
+import Website from '../../components/onboarding/sections/Website.astro';
+import Faqs from '../../components/onboarding/sections/Faqs.astro';
+import Knowledge from '../../components/onboarding/sections/Knowledge.astro';
+import Connections from '../../components/onboarding/sections/Connections.astro';
+import GoLive from '../../components/onboarding/sections/GoLive.astro';
+import { SECTIONS, section } from '../../data/onboarding.ts';
+
+export function getStaticPaths() { return SECTIONS.map((s) => ({ params: { section: s.slug } })); }
+const s = section(Astro.params.section!)!;
+const BODY: Record<string, any> = {
+  'salon-basics': Basics, 'brand-identity': Brand, 'voice-tone': Voice, 'services-pricing': Services, 'team-stylists': Team,
+  'policies-booking': Policies, 'website-channels': Website, 'faqs-escalation': Faqs, 'knowledge-base': Knowledge, connections: Connections, 'review-go-live': GoLive,
+};
+const Body = BODY[s.slug];
+---
+<AppShell title={s.title} active="onboarding" crumbs={[{ label: s.title }]} description={`Salon setup, section ${s.n}: ${s.title}. Prism fills it from your files; you check and confirm.`}>
+  <SectionLayout section={s}><Body /></SectionLayout>
+</AppShell>
+<script>import '../../scripts/onboarding.ts';</script>

@@ -1,0 +1,239 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import MetricStrip from '../components/MetricStrip.astro';
+import TabMenu from '../components/settings/TabMenu.astro';
+import { CUR } from '../data/metrics.ts';
+import { SALON } from '../data/salon.ts';
+import { MONTH, CHANNELS, CONSENT_LINE, RULES, NOTIFY, SEQUENCES, ACTIVITY, EV_LABEL, EV_ICON, WEEK, PERSONA, when } from '../data/joy.ts';
+import { dur, pct0, plural } from '../lib/format.ts';
+
+const tabs = [
+  { id: 'overview', label: 'Overview' }, { id: 'rules', label: 'When Joy hands off', count: RULES.filter((r) => r.on).length },
+  { id: 'sequences', label: 'Sequences', count: SEQUENCES.length }, { id: 'activity', label: 'Activity', count: ACTIVITY.length }, { id: 'persona', label: 'Voice and personality' },
+];
+const strip = [
+  { label: 'New leads answered', value: String(MONTH.answered), note: `of ${MONTH.total}, last 30 days`, href: '/leads', info: 'Leads from the last 30 days whose first reply came from Joy. Same window as Home.' },
+  { label: 'Median first reply', value: dur(MONTH.median), note: 'last 30 days', href: '/leads' },
+  { label: 'Booked by Joy', value: String(MONTH.booked), note: 'last 30 days', href: '/bookings' },
+  { label: 'Handed to the team', value: String(MONTH.handed), note: 'with a reason, last 30 days', href: '/leads?status=needs_person' },
+];
+const evTypes = Object.keys(EV_LABEL) as (keyof typeof EV_LABEL)[];
+const evCount = (t: string) => ACTIVITY.filter((e) => e.type === t).length;
+const quiet = 'Quiet hours 9 pm to 8 am';
+---
+<AppShell title="Joy" active="joy" description="Joy’s channels, hand-off rules, follow-up sequences, activity log and persona.">
+  <div class="jy">
+    <header class="jy-title">
+      <div class="jy-id">
+        <Avatar kind="joy" size="lg" />
+        <div><h1 class="t-title">Joy</h1><p class="t-small muted"><span class="live-dot" style="display:inline-block;margin-right:6px"></span><span id="joy-state">Joy is on</span> · answers on <span id="joy-chan-n">{CHANNELS.filter((c) => c.on).length}</span> of {CHANNELS.length} channels{CHANNELS.some((c) => !c.on) && <span class="muted" id="joy-chan-off"> ({CHANNELS.filter((c) => !c.on).map((c) => `${c.label} off`).join(', ')})</span>}</p></div>
+      </div>
+      <label class="jy-master jy-sw"><span class="sr-only">Joy is on</span><input type="checkbox" class="switch" id="joy-master" checked aria-label="Turn Joy on or off" /></label>
+    </header>
+
+    <TabMenu name="jy" label="Joy section" items={tabs.map((t) => ({ id: t.id, label: t.label, count: t.count }))} />
+    <div class="jy-tabs tabs has-tm" data-tabs role="tablist" aria-label="Joy sections">
+      {tabs.map((t) => <button class="tab" role="tab" data-panel={t.id} aria-selected="false">{t.label}{t.count != null && <span class="count">{t.count}</span>}</button>)}
+    </div>
+
+    <section class="jy-sec" data-panel-id="overview" aria-label="Overview">
+      <div class="jy-block">
+        <h2 class="t-head sec">Joy, last 30 days</h2>
+        <p class="t-small muted measure hide-m">Joy answered {MONTH.answered} of {MONTH.total} new leads, booked {MONTH.booked}, and handed {MONTH.handed} to the team with a reason. {plural(MONTH.noConsent, 'lead')} had no text consent, so she waited for them to write first.</p>
+        <MetricStrip items={strip} />
+      </div>
+
+      <div class="jy-block">
+        <header class="jy-h"><h2 class="t-head">Channels</h2><span class="t-meta">Turning one off stops Joy replying there; the team sees it in Inbox</span></header>
+        <div class="list" id="channels">
+          {CHANNELS.map((c) => (
+            <div class="row jy-chan" data-chan={c.id}>
+              <span class="cell"><Icon name={c.icon} size={16} /><span class="name">{c.label}</span></span>
+              <span class="cell sub hide-m jy-does" title={c.does}><span class="truncate">{c.does}</span></span>
+              <span class="cell sub hide-m jy-last" data-last title={`Last: ${c.last}`}><span class="truncate">Last: {c.last.replace(/(\d+) h \d+ m/, '$1 h')}</span></span>
+              <label class="cell right jy-sw">
+                {c.locked ? <span class="t-small muted" title={c.locked}>Off</span> : null}
+                <input type="checkbox" class="switch" data-chan-switch checked={c.on} disabled={!!c.locked} aria-label={`Joy on ${c.label}`} />
+              </label>
+            </div>
+          ))}
+        </div>
+        <p class="jy-note t-small muted"><Icon name="info" size={14} />Calls use Joy’s voice through ElevenLabs: {SALON.plan.minutes.used} of {SALON.plan.minutes.cap.toLocaleString('en-US')} minutes on your {SALON.plan.name} plan this month. Text back after a missed call still covers any call she can’t take. <a class="link" href="/connectors">See the connector</a></p>
+      </div>
+
+      <div class="jy-block">
+        <h2 class="t-head">Hours she works</h2>
+        <dl class="kv">
+          <div><dt>Replies</dt><dd>Answers any time; starts new texts 8 am to 9 pm</dd></div>
+          <div><dt>Salon open</dt><dd>Tue to Sat, see Brand Hub · <a class="link" href="/brand#hours">Hours</a></dd></div>
+          <div><dt>Texts she starts</dt><dd>8 am to 9 pm only. Nothing she starts goes out in quiet hours (9 pm to 8 am).</dd></div>
+          <div><dt>Consent</dt><dd class="wrap">{CONSENT_LINE}</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="jy-sec" data-panel-id="rules" aria-label="When Joy hands off" hidden>
+      <header class="jy-h"><h2 class="t-head">When Joy stops and asks a person</h2><span class="t-meta">Every hand-off carries the reason in plain English</span></header>
+      <div class="list" id="rules">
+        {RULES.map((r) => (
+          <div class="row jy-rule" data-rule>
+            <span class="cell"><StatusIcon state="needs_person" label="Needs a person" /><input class="input bare" value={r.when} aria-label="Rule" data-rule-text /></span>
+            <span class="cell sub hide-m">{r.why}</span>
+            <span class="cell right"><input type="checkbox" class="switch" data-rule-switch checked={r.on} aria-label={`Rule on: ${r.when}`} /><button class="icon-btn" type="button" data-rule-del aria-label={`Remove rule: ${r.when}`}><Icon name="trash-2" size={15} /></button></span>
+          </div>
+        ))}
+      </div>
+      <form class="jy-add" id="rule-form"><input class="input" id="rule-new" placeholder="For example: the guest asks to move an appointment" aria-label="New hand-off rule" /><button class="btn" type="submit"><Icon name="plus" size={14} />Add rule</button></form>
+      <div class="jy-block">
+        <h2 class="t-head">Who gets notified</h2>
+        <div class="jy-form">
+          <label class="field">First person asked<select class="select" id="notify" data-save-toast="Hand-off contact">{NOTIFY.map((n) => <option value={n.id}>{n.name} · {n.role}</option>)}</select></label>
+          <label class="field">If no one replies in<select class="select" data-save-toast="Escalation time"><option>15 minutes</option><option>30 minutes</option><option>1 hour</option></select></label>
+        </div>
+        <p class="t-small muted">The guest is told “I’ve asked the team” and Joy stays quiet in that thread until someone replies.</p>
+      </div>
+    </section>
+
+    <section class="jy-sec" data-panel-id="sequences" aria-label="Sequences" hidden>
+      <header class="jy-h"><h2 class="t-head">Follow-up sequences</h2><span class="t-meta">Each step stops the moment the guest replies or books</span></header>
+      <div class="list" id="seqs">
+        {SEQUENCES.map((q, qi) => (
+          <div class="group" data-collapsed={String(qi !== 0)} data-seq={q.id}>
+            <div class="group-head" role="button" tabindex="0" aria-label={`${q.name}, toggle steps`}>
+              <Icon name="chevron-down" size={14} class="chev" />{q.name}<span class="count">{q.steps.length} steps</span>
+              <span class="t-small muted hide-m seq-trig">{q.trigger}</span>
+              <span class="add seq-on"><span class="t-small muted tnum hide-m">{q.audience} in range</span><input type="checkbox" class="switch" data-seq-switch checked={q.on} aria-label={`${q.name} is on`} /></span>
+            </div>
+            <div class="group-body">
+              <div class="row head jy-step"><span class="cell">Day</span><span class="cell">Message</span><span class="cell right hide-m">Sent</span><span class="cell right hide-m">Replied</span><span class="cell right hide-m">Booked</span><span class="cell right"></span></div>
+              {q.steps.map((s, i) => (
+                <div class="jy-step-wrap" data-step>
+                  <div class="row jy-step">
+                    <span class="cell"><span class="step-node" aria-hidden="true"></span><span class="strong tnum">{s.day === 0 ? 'Day 0' : `Day ${s.day}`}</span></span>
+                    <span class="cell"><span class="truncate" data-tpl>{s.template}</span></span>
+                    <span class="cell right tnum hide-m">{s.sent}</span>
+                    <span class="cell right tnum hide-m">{s.replied}</span>
+                    <span class="cell right tnum hide-m">{s.booked}</span>
+                    <span class="cell right"><button class="btn btn-sm" type="button" data-step-edit aria-expanded="false">Edit</button></span>
+                  </div>
+                  <form class="jy-edit" hidden data-step-form>
+                    <div class="jy-form">
+                      <label class="field">Send after<span class="hint">days since the lead arrived</span><input class="input" type="number" min="0" value={s.day} name="day" /></label>
+                      <label class="field">Channel<select class="select" name="channel"><option selected={s.channel === 'Text'}>Text</option><option selected={s.channel === 'Email'}>Email</option></select></label>
+                      <label class="field wide">Template<textarea class="textarea" name="tpl" rows="3">{s.template}</textarea></label>
+                    </div>
+                    <div class="jy-checks">
+                      <label class="mini"><input type="checkbox" class="check" checked={s.stopOnReply} />Stop when the guest replies</label>
+                      <label class="mini"><input type="checkbox" class="check" checked={s.stopOnBooking} />Stop when they book</label>
+                      <label class="mini"><input type="checkbox" class="check" checked={s.quiet} />Respect quiet hours (9 pm to 8 am)</label>
+                      <label class="mini" title="Always on: Joy checks consent before every send"><input type="checkbox" class="check" checked disabled />Check text consent first (always on)</label>
+                    </div>
+                    <div class="jy-actions"><button class="btn btn-primary btn-sm" type="submit">Save step</button><button class="btn btn-quiet btn-sm" type="button" data-step-cancel>Cancel</button></div>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="jy-sec" data-panel-id="activity" aria-label="Activity" data-filterable hidden>
+      <header class="jy-h"><h2 class="t-head">Everything Joy did, with the reason</h2><span class="t-meta tnum">This week (last 7 days) · <span data-filter-count>{ACTIVITY.length}</span> shown</span></header>
+      <div class="toolbar jy-tools">
+        <button class="chip" data-filter-key="type" data-filter-value="" aria-pressed="true">All <span class="tnum">{ACTIVITY.length}</span></button>
+        {evTypes.map((t) => <button class="chip" data-filter-key="type" data-filter-value={t} aria-pressed="false">{EV_LABEL[t]} <span class="tnum">{evCount(t)}</span></button>)}
+        <span class="grow"></span>
+        <input class="input" style="max-width:220px" data-filter-search placeholder="Search a name" aria-label="Search activity" />
+      </div>
+      <div class="list">
+        {ACTIVITY.map((e) => (
+          <a class="row jy-act" href={`/leads/${e.leadId}`} data-row data-type={e.type} data-text={`${e.text} ${e.why}`}>
+            <span class="cell"><span class={`ev ${e.type}`}><Icon name={EV_ICON[e.type]} size={14} /></span><span class="truncate"><span class="name">{e.text}</span><span class="sub truncate jy-why">{e.why}</span></span></span>
+            <span class="cell right muted tnum nowrap">{when(e.at)}</span>
+          </a>
+        ))}
+        <div class="empty" data-filter-empty hidden><strong>Nothing matches</strong>Clear the filter or search for a different name.</div>
+      </div>
+    </section>
+
+    <section class="jy-sec" data-panel-id="persona" aria-label="Voice and personality" hidden>
+      <header class="jy-h"><h2 class="t-head">Voice and personality</h2><span class="t-meta">How Joy introduces herself. Facts and rules live in <a class="link" href="/brand#voice">Brand Hub</a></span></header>
+      <div class="jy-form">
+        <label class="field">Name guests see<input class="input" data-save-toast="Name" value={PERSONA.name} /></label>
+        <div class="field"><span>Voice</span><div class="chips">{PERSONA.voice.map((v) => <span class="tag joy">{v}</span>)}</div><span class="hint">Edit tone chips in Brand Hub.</span></div>
+        <label class="field wide">Greeting<textarea class="textarea" rows="2" data-save-toast="Greeting">{PERSONA.greeting}</textarea></label>
+        <label class="field wide">First-text sign-off<span class="hint">Added to the first text to anyone new</span><input class="input" data-save-toast="Sign-off" value={PERSONA.signoff} /></label>
+      </div>
+    </section>
+  </div>
+</AppShell>
+<script>import '../scripts/joy.ts';</script>
+
+<style is:global>
+  .jy { display: grid; gap: var(--s-5); max-width: none; }
+  .jy .t-title { font-size: 20px; }
+  .jy-title { display: flex; justify-content: space-between; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+  .jy-id { display: flex; align-items: center; gap: var(--s-3); }
+  .jy-master { display: flex; align-items: center; gap: var(--s-3); }
+  .jy-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); padding-bottom: var(--s-2); }
+  .jy-tabs .tab { flex: none; }
+  .jy-sec { display: grid; gap: var(--s-6); align-content: start; }
+  .jy-sec[hidden] { display: none; }
+  .jy-block { display: grid; gap: var(--s-3); }
+  .jy-h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; padding-bottom: var(--s-2); border-bottom: 1px solid var(--line); }
+  .jy .sec { color: var(--ink); }
+  .jy .link { color: var(--violet-deep); font-weight: 600; }
+  .jy .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .jy-chan { --cols: 240px minmax(0, 1.6fr) 300px 70px; padding: 0; } .jy-last { color: var(--ink-3); }
+  .jy-chan .wrap, .kv .wrap { white-space: normal; }
+  .jy-chan { min-height: 44px; }
+  .jy-sw { min-height: 44px; min-width: 56px; justify-content: flex-end; cursor: pointer; }
+  .jy-note { display: flex; gap: var(--s-2); align-items: flex-start; }
+  .jy-note svg { margin-top: 2px; flex: none; }
+  .jy .kv { display: grid; }
+  .jy .kv > div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: var(--s-3); padding: 9px 0; border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .jy .kv dt { color: var(--ink-3); } .jy .kv dd { font-weight: 500; }
+  .jy-rule { --cols: minmax(0, 1.6fr) minmax(0, 1fr) 96px; padding: 0; }
+  .jy-rule .right { gap: var(--s-2); }
+  .input.bare { border-color: transparent; background: transparent; padding-left: 4px; font-weight: 600; }
+  .input.bare:hover { background: var(--hover); border-color: transparent; }
+  .jy-add { display: flex; gap: var(--s-2); max-width: 640px; }
+  .jy-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); max-width: 720px; }
+  .jy-form .wide { grid-column: 1 / -1; }
+  .jy .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .jy .group-head { padding: 0 var(--s-3); }
+  .seq-trig { margin-left: var(--s-3); font-weight: 400; color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seq-on { margin-left: auto; display: flex; align-items: center; gap: var(--s-3); }
+  .jy-step { --cols: 96px minmax(0, 1fr) 56px 64px 60px 64px; padding: 0 var(--s-3); }
+  .step-node { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--violet); background: var(--surface); flex: none; position: relative; }
+  .jy-step-wrap { position: relative; }
+  .jy-step-wrap:not(:last-child) .step-node::after { content: ""; position: absolute; left: 50%; top: 9px; width: 1.5px; height: 40px; margin-left: -.75px; background: var(--violet-soft); }
+  .jy-edit { display: grid; gap: var(--s-4); padding: var(--s-4) var(--s-3) var(--s-4) 108px; border-bottom: 1px solid var(--line); background: var(--sunken); }
+  .jy-checks { display: grid; gap: 8px; }
+  .jy-actions { display: flex; gap: var(--s-2); }
+  .mini { display: inline-flex; align-items: center; gap: 8px; font-size: var(--t-13); color: var(--ink-2); cursor: pointer; }
+  .jy-tools { padding-left: 0; padding-right: 0; }
+  .jy-act { --cols: minmax(0, 1fr) 110px; padding: 0; min-height: 48px; }
+  .jy-act .cell > .truncate { display: grid; }
+  .jy-why { color: var(--ink-3); font-size: var(--t-12); }
+  .nowrap { white-space: nowrap; }
+  .ev { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--joy-wash); color: var(--joy-ink); }
+  .ev.booked { background: var(--good-wash); color: var(--good); }
+  .ev.handed { background: var(--attn-wash); color: var(--attn); }
+  .ev.paused { background: var(--off-wash); color: var(--off); }
+  .ev.followed { background: var(--violet-wash); color: var(--violet-deep); }
+  @media (max-width: 960px) { .jy-chan { --cols: 150px minmax(0, 1fr) 70px; } .jy-chan .hide-m:nth-child(2) { display: none; } }
+  @media (max-width: 900px) {
+    .jy-title { flex-wrap: nowrap; } .jy-id { min-width: 0; flex: 1; }
+    .jy-chan { --cols: minmax(0, 1fr) 56px; }
+    .jy-rule { --cols: minmax(0, 1fr) 90px; }
+    .jy-step { --cols: 70px minmax(0, 1fr) 56px; }
+    .jy-edit { padding-left: var(--s-3); }
+    .jy-form { grid-template-columns: 1fr; }
+    .jy-act { --cols: minmax(0, 1fr) 76px; } .jy-act .nowrap { white-space: normal; text-align: right; font-size: var(--t-12); }
+  }
+</style>

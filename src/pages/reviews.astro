@@ -1,0 +1,187 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import Panels from '../components/retention/Panels.astro';
+import MetricStrip from '../components/MetricStrip.astro';
+import ListTools from '../components/ListTools.astro';
+import Stars from '../components/reviews/Stars.astro';
+import TrendChart from '../components/reviews/TrendChart.astro';
+import ReplyDrawer from '../components/reviews/ReplyDrawer.astro';
+import { REVIEWS, NEEDS_REPLY, REPLIED, AVG, TOTAL, SPLIT, TREND, REQ, draftFor, sentiment, reviewDate, ageDays, ageLabel } from '../data/reviews.ts';
+import { service, stylist } from '../data/salon.ts';
+import { dateShort, pct0, num } from '../lib/format.ts';
+
+const lowest = NEEDS_REPLY[0];
+const maxN = Math.max(...SPLIT.map((s) => s.n));
+const in90 = REVIEWS.filter((r) => ageDays(r) <= 90).length;
+const firstLine = (t: string) => t;
+const oneStar = REVIEWS.filter((r) => r.stars === 1);
+const oneStarOpen = oneStar.filter((r) => !r.replied).length;
+const oldest = Math.max(...NEEDS_REPLY.map(ageDays));
+const topStrip = [
+  { label: 'Rating', value: `${AVG.toFixed(1)} of 5`, note: `${num(TOTAL)} reviews`, info: `Average of ${num(TOTAL)} Google reviews in the last 12 months.` },
+  { label: 'Needs a reply', value: String(NEEDS_REPLY.length), note: oldest === 0 ? 'oldest is from today' : `oldest is ${oldest} ${oldest === 1 ? 'day' : 'days'} old`, info: '1-star reviews are included when they have no reply yet.' },
+  { label: 'Last 90 days', value: String(in90), note: 'new reviews', info: 'Reviews posted in the last 90 days.' },
+];
+const waits = ['1 hour', '2 hours', 'Next morning'];
+const reqStrip = [
+  { label: 'Visits checked out', value: String(REQ.visits) },
+  { label: 'Asks sent', value: String(REQ.sent), note: `${pct0(REQ.sent / REQ.visits)} of visits` },
+  { label: 'Opened', value: String(REQ.opened), note: `${pct0(REQ.opened / REQ.sent)} of asks` },
+  { label: 'Left a review', value: String(REQ.reviewed), note: `${pct0(REQ.reviewed / REQ.sent)} of asks` },
+];
+const rvData = REVIEWS.map((r) => ({ id: r.id, name: r.name, stars: r.stars, text: r.text, replied: r.replied, reply: r.reply ?? draftFor(r), draft: draftFor(r), meta: `${r.stars} stars · ${dateShort(reviewDate(r))} · ${service(r.serviceId).name}${r.stylistId ? ' with ' + stylist(r.stylistId).name.split(' ')[0] : ''}` }));
+const groups = [{ key: 'need', label: 'Needs a reply', list: NEEDS_REPLY, icon: 'not_answered' }, { key: 'done', label: 'Replied', list: REPLIED, icon: 'done' }];
+import StatusIcon from '../components/StatusIcon.astro';
+---
+<AppShell title="Reviews" active="reviews" description="Google rating, review inbox with Dash’s draft replies, and review-request settings.">
+  <Panels />
+  <div class="pg rvpg">
+    <header class="pg-head">
+      <div class="pg-copy">
+        <h1 class="t-verdict">{NEEDS_REPLY.length} reviews need a reply, and the {lowest.stars}-star one is {ageLabel(lowest)}.</h1>
+        <p class="attrib t-meta hide-m"><Avatar kind="dash" size="sm" /><span>Dash has drafted every reply for you to edit · Google reviews, synced 9:30 am</span></p>
+      </div>
+      <button class="btn btn-black" type="button" data-open-review={lowest.id}><span>Reply to the {lowest.stars}-star review</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+    </header>
+
+    <div class="rv-layout">
+      <div class="stack main-col">
+        <div class="strip rv-top" style="--n:3" role="group" aria-label="Reviews at a glance">
+          {topStrip.map((m, i) => (
+            <div class={`metric ${i === 2 ? 'hide-m' : ''}`} title={m.info}>
+              <span class="metric-label">{m.label}<Icon name="info" size={12} /></span>
+              <span class="metric-value tnum">{m.value}</span>
+              <span class="metric-was"><span>{m.note}</span></span>
+            </div>
+          ))}
+        </div>
+
+        <section class="panel" aria-labelledby="h-in" data-filterable>
+          <header class="panel-head">
+            <h2 class="t-head" id="h-in">Review inbox <span class="muted tnum" data-filter-count>{REVIEWS.length}</span></h2>
+            <div class="acts"><span class="t-meta hide-m tnum">{NEEDS_REPLY.length} need a reply · {oneStarOpen === 0 ? `${oneStar.length} one-star already replied` : `${oneStarOpen} one-star waiting`}</span><ListTools label="review inbox" /><button class="chip chip-solid" type="button" data-filter-key="low" data-filter-value="yes" data-toggle="1" aria-pressed="false"><Icon name="star" size={13} />3 stars or fewer</button><button class="chip chip-solid" type="button" data-filter-key="one" data-filter-value="yes" data-toggle="1" aria-pressed="false" title={`${oneStar.length} one-star review${oneStar.length === 1 ? '' : 's'}, ${oneStarOpen === 0 ? 'already replied to' : oneStarOpen + ' still need a reply'}`}><Icon name="star" size={13} />1 star <span class="tnum">{oneStar.length}</span></button></div>
+          </header>
+          <div class="list" id="inbox">
+            {groups.map((g) => (
+              <div class="group" data-group={g.key} data-collapsed="false">
+                <button class="group-head" type="button"><span class="chev" aria-hidden="true"><Icon name="chevron-down" size={14} /></span><StatusIcon state={g.icon} /><span>{g.label}</span><span class="count">{g.list.length}</span></button>
+                <div class="group-body">
+                  {g.list.map((r) => {
+                    const dl = firstLine(draftFor(r));
+                    return (
+                      <div class="row rv-row" data-row data-id={r.id} data-low={r.stars <= 3 ? 'yes' : 'no'} data-one={r.stars === 1 ? 'yes' : 'no'} role="button" tabindex="0" aria-label={`${r.name}, ${r.stars} stars. Open to reply`}>
+                        <span class="cell"><Stars n={r.stars} size={12} /></span>
+                        <span class="cell"><span class="rv-main"><span class="truncate rv-line"><span class="name">{r.name}</span> <span class="sub rv-ex">{r.text}</span></span>{!r.replied && <span class="rv-draft truncate hide-m"><span class="strong">Dash’s draft:</span> {dl}</span>}</span></span>
+                        <span class="cell muted hide-m truncate">{service(r.serviceId).name}{r.stylistId ? ` · ${stylist(r.stylistId).name.split(' ')[0]}` : ''}</span>
+                        <span class="cell right muted tnum rv-date"><span>{r.daysAgo === 0 ? 'Today' : dateShort(reviewDate(r))}</span>{!r.replied && <span class="draft-m only-m" data-draft-m>Draft ready</span>}</span>
+                        <span class="cell right hide-m rv-act">{!r.replied && <span class="draft-d muted t-small" data-draft-d>Draft ready</span>}<span class="act-label t-small">{r.replied ? 'View reply' : 'Review draft'}</span></span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div class="empty" data-filter-empty hidden><strong>Nothing matches</strong>Turn off the filter to see every review.</div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-st">
+          <header class="panel-head"><h2 class="t-head" id="h-st">Last 30 days</h2><span class="t-meta">Review requests</span></header>
+          <MetricStrip items={reqStrip} cols={4} />
+        </section>
+        <div class="two">
+          <section class="panel" aria-labelledby="h-sum">
+            <header class="panel-head"><h2 class="t-head" id="h-sum">Rating</h2><span class="t-meta">Google · {num(TOTAL)} reviews in the last 12 months</span></header>
+            <div class="sum">
+              <div class="sum-top"><span class="avg tnum">{AVG.toFixed(1)}</span><div><Stars n={AVG} size={15} /><div class="t-small muted tnum">{num(TOTAL)} in 12 months</div></div></div>
+              <ul class="bars">
+                {SPLIT.map((s) => (
+                  <li class="bar-row"><span class="t-small tnum">{s.stars} {s.stars === 1 ? "star" : "stars"}</span><span class="meter" tabindex="0" data-tip={`${s.stars} ${s.stars === 1 ? 'star' : 'stars'}|Reviews~${s.n}|Share of all reviews~${Math.round((s.n / TOTAL) * 100)}%`} role="img" aria-label={`${s.n} reviews with ${s.stars} stars`}><i style={`width:${(s.n / maxN) * 100}%`}></i></span><span class="t-small tnum muted">{s.n}</span></li>
+                ))}
+              </ul>
+            </div>
+          </section>
+          <section class="panel" aria-labelledby="h-tr">
+            <header class="panel-head"><h2 class="t-head" id="h-tr">Average by month</h2><span class="t-meta hide-m">Line: average, 4.0 to 5.0 · bars: reviews per month, 0 to 30</span></header>
+            <div class="panel-body"><TrendChart data={TREND} /><p class="t-meta only-m">Line: average rating, 4.0 to 5.0. Bars: reviews per month, 0 to 30.</p></div>
+          </section>
+        </div>
+
+      </div>
+
+      <aside class="rv-rail" aria-label="Review requests">
+        <section class="panel" aria-labelledby="h-req">
+          <header class="panel-head"><h2 class="t-head" id="h-req">Asking for reviews</h2></header>
+          <div class="set">
+            <label class="set-row"><span><span class="strong">Ask automatically</span><span class="t-small muted">Joy texts after checkout</span></span><input class="switch set-sw" type="checkbox" checked data-label="Automatic review asks" /></label>
+            <div class="set-row"><span><span class="strong">Wait</span><span class="t-small muted">after the guest checks out</span></span>
+<button class="select set-sel" type="button" id="wait-btn" data-menu="m-wait" aria-haspopup="menu" aria-label="How long after checkout"><span data-wait-label>2 hours</span><Icon name="chevron-down" size={14} /></button></div>
+            <label class="set-row"><span><span class="strong">Skip guests with an open complaint</span><span class="t-small muted">{REQ.complaint === 0 ? 'None right now' : `${REQ.complaint} skipped this month`}</span></span><input class="switch set-sw" type="checkbox" checked data-label="Skipping guests with an open complaint" /></label>
+            <div class="set-row"><span><span class="strong">Only guests who agreed to texts</span><span class="t-small muted">{REQ.noConsent} skipped this month without consent</span></span><span class="locked t-small muted" title="Required by the consent rule: Joy only texts guests who agreed to texts"><Icon name="lock" size={13} />Required</span></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+  <div class="menu" id="m-wait" role="menu"><div class="menu-head">Wait after checkout</div>{waits.map((w) => <button class="menu-item" role="menuitem" data-wait={w}>{w}</button>)}</div>
+  <ReplyDrawer />
+  <script type="application/json" id="rv-data" set:html={JSON.stringify(rvData)}></script>
+</AppShell>
+<script>import '../scripts/reviews.ts';</script>
+
+<style>
+  .rv-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0; align-items: start; }
+  .main-col { gap: var(--s-8); padding-right: var(--s-6); }
+  .rv-rail { border-left: 1px solid var(--line); padding-left: var(--s-6); display: grid; gap: var(--s-8); }
+  .sum { padding: var(--s-4) 0 0; display: grid; gap: var(--s-4); }
+  .sum-top { display: flex; align-items: center; gap: var(--s-4); }
+  .avg { font-size: var(--t-34); line-height: 1; font-weight: 600; letter-spacing: -0.03em; }
+  .bars { display: grid; gap: 7px; }
+  .bar-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) 28px; gap: var(--s-3); align-items: center; }
+  .bar-row .t-small:last-child { text-align: right; }
+  .rv-row { --cols: 76px minmax(0, 1fr) 150px 64px 160px; cursor: pointer; min-height: 40px; padding-left: 12px; padding-right: 12px; }
+  .rv-act { gap: 10px; }
+  .rv-date { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 0; }
+  .draft-m { font-size: 11px; color: var(--ink-3); font-weight: 400; white-space: nowrap; }
+  .rv-main { display: grid; gap: 1px; min-width: 0; }
+  .rv-draft { color: var(--ink-3); font-size: var(--t-12); display: none; }
+  @media (hover: hover) and (min-width: 901px) {
+    .rv-row:hover .rv-draft, .rv-row:focus-visible .rv-draft { display: block; }
+    .rv-row:hover, .rv-row:focus-visible { padding-top: 6px; padding-bottom: 6px; }
+  }
+  .rv-top .metric { padding-top: 10px; padding-bottom: 10px; }
+  .chip-solid { border-style: solid; }
+  .rvpg :global(.panel-head) { padding-left: var(--s-3); padding-right: var(--s-3); }
+  .rvpg :global(.panel-head .acts) { padding-right: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .locked { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .rv-draft .strong { color: var(--ink-2); font-weight: 600; }
+  .set-sel { display: flex; align-items: center; justify-content: space-between; gap: 6px; text-align: left; cursor: pointer; }
+  .rv-row:hover { background: var(--hover); }
+  .rv-row:focus-visible { outline-offset: -2px; }
+  .rv-row .cell:first-child { gap: 8px; }
+  .rv-row .name + .sub { margin-left: 4px; }
+  .act-label { color: var(--ink-2); font-weight: 500; }
+  .rv-row:hover .act-label { text-decoration: underline; text-underline-offset: 3px; }
+  .set { display: grid; }
+  .set-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 12px 0; border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .set-row > span:first-child { display: grid; gap: 2px; min-width: 0; }
+  .set-row:last-child { border-bottom: 0; }
+  .set-sel { width: 130px; flex: none; }
+  .switch:disabled { opacity: .55; cursor: not-allowed; }
+  :global(.rv-stars) { display: flex; align-items: center; gap: var(--s-2); }
+  @media (max-width: 1100px) {
+    .rv-layout { grid-template-columns: minmax(0, 1fr); }
+    .main-col { padding-right: 0; }
+    .rv-rail { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: var(--s-6); margin-top: var(--s-6); }
+  }
+  @media (max-width: 900px) {
+    .rv-row { --cols: 64px minmax(0, 1fr) auto; min-height: 52px; max-height: 56px; padding: 3px 12px; overflow: hidden; }
+    .rv-line { display: grid; white-space: normal; overflow: visible; text-overflow: clip; gap: 0; }
+    .rv-line .name { line-height: 1.3; }
+    .rv-ex { margin-left: 0 !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; line-height: 1.25; font-size: 12px; }
+    .rv-top.strip .metric { border-bottom: 0; }
+    .rv-top.strip .metric:nth-child(2) { padding-left: var(--s-4); border-right: 0; border-bottom: 0; }
+  }
+</style>

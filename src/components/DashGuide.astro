@@ -1,0 +1,17 @@
+---
+// Dash out front: a launcher that invites a question, plus the hooks the first-sign-in tour (scripts/guide.ts) needs.
+import Avatar from './Avatar.astro';
+import Icon from './Icon.astro';
+interface Props { owner: string; salon: string; suggested: string[]; counts: { leads: number; inbox: number; bookings: number } }
+const { owner, salon, suggested, counts } = Astro.props;
+const ideas = suggested.slice(0, 3);
+---
+<div class="dg" id="dg" data-owner={owner} data-salon={salon} data-counts={JSON.stringify(counts)}>
+  <div class="dg-bubble" id="dg-bubble" role="region" aria-label="Ask Dash" hidden>
+    <button type="button" class="dg-x" id="dg-x" aria-label="Dismiss"><Icon name="x" size={14} /></button>
+    <p class="dg-hi"><strong>Hi {owner}, I’m Dash.</strong> Ask me anything about {salon}: who to call first, which ads pay back, who to win back.</p>
+    <div class="dg-chips">{ideas.map((q) => <button type="button" data-dg-ask={q}>{q}</button>)}</div>
+  </div>
+  <button type="button" class="dg-fab" data-open-dash aria-label="Ask Dash a question"><Avatar kind="dash" size="md" /><span>Ask Dash</span></button>
+</div>
+<template id="dg-avatar"><Avatar kind="dash" size="lg" /></template>

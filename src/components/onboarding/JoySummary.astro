@@ -1,0 +1,40 @@
+---
+// Right rail: what Joy will know from this section, where each fact came from, and what she will hand to a person.
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import SourceBadge from './SourceBadge.astro';
+import { src, type Section, type SourceId } from '../../data/onboarding.ts';
+interface Props { section: Section }
+const { section: s } = Astro.props;
+---
+<aside class="ob-joy" aria-labelledby="ob-joy-h">
+  <header class="ob-joy-head">
+    <Avatar kind="joy" size="md" />
+    <div><h2 class="t-head" id="ob-joy-h">What Joy will know</h2><p class="t-meta">Updates as Prism reads</p></div>
+  </header>
+  <p class="ob-joy-label">Facts</p>
+  <ul class="ob-facts">
+    {s.facts.map((f) => (
+      <li data-need={f.src === 'answer' ? '' : f.src} data-ready={f.src === 'answer' ? 'true' : 'false'} data-opt={s.extras?.includes(f.src as SourceId) ? '' : undefined}>
+        <span class="ob-fact-t">{f.text}</span>
+        <SourceBadge src={f.src} />
+        {f.src !== 'answer' && <span class="ob-fact-wait t-small">Waiting for {src(f.src).ask}</span>}
+      </li>
+    ))}
+  </ul>
+  {s.conflicts?.map((c) => (
+    <div class="ob-callout attn" data-need={c.need.join(',')} data-ready="false">
+      <strong><Icon name="triangle-alert" size={13} />Needs your call</strong>
+      <p>{c.text}</p>
+    </div>
+  ))}
+  <div class="ob-callout joy">
+    <strong><Icon name="hand" size={13} />Joy will hand off</strong>
+    <ul>{s.asks.map((a) => <li>{a}</li>)}</ul>
+  </div>
+  <p class="ob-guard t-small"><Icon name="shield-check" size={13} />Joy only uses facts you confirm.</p>
+  <div class="ob-joy-acts">
+    <button type="button" class="btn btn-primary" data-confirm><Icon name="check" size={14} /><span data-confirm-label>Confirm summary</span></button>
+    <button type="button" class="btn" data-edit><Icon name="pencil" size={14} />Edit</button>
+  </div>
+</aside>

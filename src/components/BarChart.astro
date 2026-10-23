@@ -1,0 +1,32 @@
+---
+// HTML/CSS bars so labels stay crisp at every width. Accessible: title per bar + text summary.
+interface Props { data: { label: string; value: number; sub?: string; tip?: string }[]; height?: number; fmt?: (n: number) => string; every?: number; summary?: string; color?: string; unit?: string }
+const { data, height = 140, fmt = (n) => String(Math.round(n)), every = 7, summary, color = 'var(--d-teal)', unit = 'Value' } = Astro.props;
+const max = Math.max(1, ...data.map((d) => d.value));
+const niceMax = Math.max(5, Math.ceil(max / 5) * 5);
+---
+<figure class="bars" role="img" aria-label={summary ?? 'Bar chart'} style={`--h:${height}px;--c:${color}`}>
+  <div class="bars-y"><span>{fmt(niceMax)}</span><span>{fmt(niceMax / 2)}</span><span>0</span></div>
+  <div class="bars-plot">
+    <div class="bars-grid"><i></i><i></i><i></i></div>
+    <div class="bars-cols" style={`--n:${data.length}`}>
+      {data.map((d, i) => (
+        <div class="bars-col" tabindex="0" data-tip={d.tip ?? `${d.label}|${unit}~${fmt(d.value)}${d.sub ? `|${d.sub}` : ''}`} data-tip-c="var(--d-teal)"><i style={`height:${(d.value / niceMax) * 100}%`}></i>{i % every === 0 && <span>{d.label}</span>}</div>
+      ))}
+    </div>
+  </div>
+</figure>
+<style>
+  .bars { margin: 0; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 6px; font-size: var(--t-11); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .bars-y { height: var(--h); display: flex; flex-direction: column; justify-content: space-between; text-align: right; line-height: 1; }
+  .bars-plot { position: relative; padding-bottom: 20px; }
+  .bars-grid { position: absolute; inset: 0 0 20px 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+  .bars-grid i { display: block; height: 1px; background: var(--line); }
+  .bars-cols { position: relative; height: var(--h); display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 3px; align-items: end; }
+  .bars-col { height: 100%; display: flex; align-items: flex-end; position: relative; border-radius: 3px 3px 0 0; outline: none; transition: background var(--dur) var(--ease); }
+  .bars-col:hover, .bars-col:focus-visible { background: var(--violet-wash); }
+  .bars-cols:hover .bars-col:not(:hover) i { opacity: .55; }
+  .bars-col:hover i, .bars-col:focus-visible i { background: var(--d-orange); }
+  .bars-col i { display: block; width: 100%; background: var(--c); border-radius: 2px 2px 0 0; min-height: 1px; transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .bars-col span { position: absolute; top: calc(100% + 5px); left: 0; white-space: nowrap; }
+</style>

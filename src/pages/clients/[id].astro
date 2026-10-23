@@ -1,0 +1,182 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import Avatar from '../../components/Avatar.astro';
+import StatusIcon from '../../components/StatusIcon.astro';
+import VisitTimeline from '../../components/clients/VisitTimeline.astro';
+import { ROWS, byId, dashNote, notesOf, birthdayOf } from '../../data/clients.ts';
+import { APPOINTMENTS, LEADS } from '../../data/seed.ts';
+import { NOW, DAY } from '../../data/clock.ts';
+import { service, stylist } from '../../data/salon.ts';
+import { ROWS as THREADS } from '../../data/inbox.ts';
+import { money, dateShort, dayShort, clock, first as firstName } from '../../lib/format.ts';
+
+export function getStaticPaths() {
+  return ROWS.map((r) => ({ params: { id: r.id } }));
+}
+const { id } = Astro.params;
+const r = byId(id!);
+const c = r.c;
+const idx = ROWS.findIndex((x) => x.id === r.id);
+const prev = ROWS[(idx - 1 + ROWS.length) % ROWS.length], next = ROWS[(idx + 1) % ROWS.length];
+const f = firstName(r.name);
+const note = dashNote(r);
+const upcoming = APPOINTMENTS.filter((a) => a.clientId === c.id && a.start >= NOW && ['booked', 'confirmed', 'in_progress'].includes(a.status));
+const lead = c.leadId ? LEADS.find((l) => l.id === c.leadId) : undefined;
+const svc = service(c.preferredServiceId);
+const lcLabel = ({ active: 'Active', at_risk: 'At risk', lapsed: 'Lapsed', prospect: 'New' } as Record<string, string>)[r.lifecycle];
+const wk = (d: number) => { const w = Math.round(Math.abs(d) / 7); return w < 1 ? `${Math.abs(d)} days` : w === 1 ? '1 week' : `${w} weeks`; };
+const dueDays = r.last ? Math.round((r.rebookDue - NOW) / DAY) : null;
+const dueText = r.next ? 'Already booked' : dueDays === null ? 'After the first visit' : dueDays < 0 ? `${dateShort(r.rebookDue)} · overdue by ${wk(dueDays)}` : `${dateShort(r.rebookDue)} · in ${wk(dueDays)}`;
+const bday = birthdayOf(c);
+const hasThread = !!(lead && THREADS.some((t) => t.id === lead.id));
+const threadHref = hasThread ? `/inbox?t=${lead!.id}` : '';
+const tel = `tel:+1${c.phone.replace(/\D/g, '').slice(-10)}`;
+const dueMain = r.next ? 'Already booked' : dueDays === null ? 'After the first visit' : dueDays < 0 ? `Overdue ${wk(dueDays)}` : `In ${wk(dueDays)}`;
+const dueSub = r.next || dueDays === null ? '' : `due ${dateShort(r.rebookDue)}`;
+const noText = 'No text consent. Call or email instead.';
+const tagList = [...new Set([r.stage === 'VIP' ? 'VIP' : '', ...c.tags].filter(Boolean))];
+---
+<AppShell title={r.name} active="clients" crumbs={[{ label: r.name }]} description={`${r.name}, a ${r.stage.toLowerCase()} client at Marlow & Finch: visit history, upcoming appointments and notes.`}>
+  <Fragment slot="actions">
+    <span class="t-meta tnum hide-m" title="All clients, most recent visit first">{idx + 1} of {ROWS.length}</span>
+    <a class="icon-btn" href={`/clients/${prev.id}`} aria-label={`Previous client: ${prev.name}`} title={prev.name}><Icon name="chevron-up" size={16} /></a>
+    <a class="icon-btn" href={`/clients/${next.id}`} aria-label={`Next client: ${next.name}`} title={next.name}><Icon name="chevron-down" size={16} /></a>
+  </Fragment>
+  <div class="rec split">
+    <div class="primary rec-main">
+      <header class="rec-head">
+        <Avatar name={r.name} size="xl" />
+        <div class="rec-id">
+          <h1 class="t-title">{r.name}</h1>
+          <p class="t-meta rec-sub"><span class="inl"><StatusIcon state={r.lifecycle} size={13} />{lcLabel}</span><span>{r.stage}</span><span class="tnum">{c.visits.length} {c.visits.length === 1 ? 'visit' : 'visits'}</span>{hasThread && <a class="link-v" href={threadHref}>Conversation</a>}</p>
+        </div>
+        <div class="rec-actions">
+          <a class="btn btn-primary ra-book" href="/bookings"><Icon name="calendar-plus" size={14} /><span class="hide-m">Book next visit</span><span class="only-m">Book visit</span></a>
+          {c.consentSms
+            ? (hasThread ? <a class="btn" href={threadHref}><Icon name="message-square" size={14} />Text {f}</a> : <button type="button" class="btn" data-toast={`Opening a text to ${f}. Consent checked, quiet hours respected.`}><Icon name="message-square" size={14} />Text {f}</button>)
+            : <button type="button" class="btn" disabled title={noText} aria-describedby="no-text-why"><Icon name="message-square-off" size={14} />Text {f}</button>}
+          <a class="btn" href={tel}><Icon name="phone" size={14} />Call</a>
+          <button type="button" class="icon-btn ra-more" data-menu="menu-client-more" aria-haspopup="menu" aria-label="More actions" title="More actions"><Icon name="ellipsis" size={16} /></button>
+        </div>
+        {!c.consentSms && <p class="t-small muted ra-why" id="no-text-why"><Icon name="message-square-off" size={12} />No text consent. Call or email instead.</p>}
+      </header>
+
+      {note && (
+        <section class="rec-sec dash-note" aria-label="Dash note">
+          <Avatar kind="dash" size="md" />
+          <div class="dn-body"><p class="strong">At risk. {note.text}</p><p class="t-small muted">{note.why}</p></div>
+          {c.consentSms && c.consentMarketing && <button type="button" class="btn btn-dash" data-toast={`Win-back text queued for ${f}. Consent checked.`} data-undo="1">Win back {f}</button>}
+        </section>
+      )}
+
+      <section class="rec-sec" aria-labelledby="h-up">
+        <div class="sec-head"><h2 class="t-head" id="h-up">Upcoming <span class="muted tnum">{upcoming.length}</span></h2></div>
+        {upcoming.length === 0 ? (
+          <div class="up-empty"><p class="muted">Nothing booked. {r.last ? `${f} was last here ${dateShort(r.last)}.` : ''}</p></div>
+        ) : (
+          <ul class="up-list">
+            {upcoming.map((a) => (
+              <li class="up-row"><StatusIcon state={a.status === 'confirmed' ? 'confirmed' : 'pending'} size={14} /><span class="tnum strong up-when">{dayShort(a.start)}, {clock(a.start)}</span><span class="truncate">{service(a.serviceId).name} <span class="muted">with {stylist(a.stylistId).name.split(' ')[0]}</span></span><span class="tnum muted up-amt">{money(a.value)}</span></li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section class="rec-sec" aria-labelledby="h-hist">
+        <div class="sec-head"><h2 class="t-head" id="h-hist">Visit history</h2><span class="t-meta tnum">{money(c.lifetimeSpend)} lifetime</span></div>
+        <VisitTimeline visits={c.visits} first={f} />
+      </section>
+
+      <section class="rec-sec" aria-labelledby="h-notes">
+        <div class="sec-head"><h2 class="t-head" id="h-notes">Notes</h2></div>
+        <label class="sr-only" for="notes">Notes about {r.name}</label>
+        <textarea class="textarea" id="notes" rows="3">{notesOf(c)}</textarea>
+        <div class="notes-foot"><span class="t-meta">Only your team sees notes.</span><button type="button" class="btn btn-sm" data-toast={`Notes saved for ${f}`}>Save notes</button></div>
+      </section>
+    </div>
+
+    <aside class="aside" aria-label="Properties">
+      <h2 class="props-title">Properties</h2>
+      <dl>
+        <div class="prop"><dt>Stylist</dt><dd><Avatar name={r.stylist} size="sm" />{r.stylist}</dd></div>
+        <div class="prop"><dt>Preferred</dt><dd class="truncate">{svc.name}</dd></div>
+        <div class="prop"><dt>Usual ticket</dt><dd class="tnum">{r.avg ? money(r.avg) : '—'}</dd></div>
+        <div class="prop"><dt>Lifetime spend</dt><dd class="tnum strong">{money(c.lifetimeSpend)}</dd></div>
+        <div class="prop"><dt>First visit</dt><dd class="tnum">{dateShort(c.firstVisitAt)}, {new Date(c.firstVisitAt).getUTCFullYear()}</dd></div>
+        <div class="prop"><dt>Last visit</dt><dd class="tnum">{r.last ? dateShort(r.last) : 'Not yet'}</dd></div>
+        <div class="prop"><dt>Next visit</dt><dd class="tnum">{r.next ? `${dayShort(r.next)}, ${clock(r.next)}` : <span class="muted">None booked</span>}</dd></div>
+        <div class="prop"><dt>Rebook due</dt><dd class="col tnum"><span class="nowrap">{dueMain}</span>{dueSub && <span class="t-small muted">{dueSub}</span>}</dd></div>
+        <div class="prop"><dt>Source</dt><dd class="truncate">{r.src}</dd></div>
+        <div class="prop"><dt>Birthday</dt><dd>{bday ?? <span class="muted">Not added</span>}</dd></div>
+      </dl>
+      <h2 class="props-title">Consent</h2>
+      <dl>
+        <div class="prop"><dt>Texts</dt><dd class={`consent-v ${c.consentSms ? 'ok' : 'off'}`}><Icon name={c.consentSms ? 'circle-check' : 'circle-x'} size={15} /><span class="muted">{c.consentSms ? 'Agreed' : 'No consent'}</span></dd></div>
+        <div class="prop"><dt>Promo texts</dt><dd class={`consent-v ${c.consentMarketing ? 'ok' : 'off'}`}><Icon name={c.consentMarketing ? 'circle-check' : 'circle-x'} size={15} /><span class="muted">{c.consentMarketing ? 'Agreed' : 'Not agreed'}</span></dd></div>
+      </dl>
+      <h2 class="props-title">Contact</h2>
+      <dl>
+        <div class="prop"><dt>Phone</dt><dd class="tnum"><a href={tel}>{c.phone}</a></dd></div>
+        <div class="prop"><dt>Email</dt><dd class="truncate"><a href={`mailto:${c.email}`}>{c.email}</a></dd></div>
+      </dl>
+      <h2 class="props-title">Tags</h2>
+      <div class="d-tags">{tagList.length ? tagList.map((t) => <span class={`tag ${t === 'VIP' ? 'violet' : ''}`}>{t}</span>) : <span class="muted t-small">No tags</span>}</div>
+      {lead && <div class="rail-links"><a class="btn btn-quiet" href={`/leads/${lead.id}`}>Open lead record<Icon name="arrow-up-right" size={14} /></a></div>}
+    </aside>
+  </div>
+  <div class="menu" id="menu-client-more" role="menu">
+    <button type="button" class="menu-item" role="menuitem" data-toast={`Reminder set to call ${f}`} data-undo="1"><Icon name="bell" size={15} />Remind me to call</button>
+    <a class="menu-item" role="menuitem" href={`mailto:${c.email}`}><Icon name="mail" size={15} />Email {f}</a>
+  </div>
+</AppShell>
+
+<style is:global>
+  .rec { max-width: 1180px; margin: calc(var(--s-5) * -1) calc(var(--s-6) * -1) calc(var(--s-10) * -1); }
+  .rec-main { padding: var(--s-5) var(--s-6) var(--s-10); display: grid; gap: var(--s-6); align-content: start; }
+  .rec .aside { padding: var(--s-5) var(--s-5) var(--s-10); }
+  .rec-head { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+  .rec-id { flex: 1; min-width: 200px; display: grid; gap: 4px; }
+  .rec-sub { display: flex; gap: var(--s-3); align-items: center; flex-wrap: wrap; }
+  .rec-sub .inl { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); font-weight: 600; }
+  .rec-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
+  .rec-sec { display: grid; gap: var(--s-3); }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); padding-bottom: var(--s-2); border-bottom: 1px solid var(--line); }
+  .dash-note { grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .dn-body { display: grid; gap: 2px; }
+  .up-list { display: grid; }
+  .up-row, .tl-row { display: grid; align-items: center; gap: var(--s-3); border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .up-row { grid-template-columns: 16px 150px minmax(0, 1fr) 70px; min-height: 40px; }
+  .up-amt, .tl-amt { text-align: right; }
+  .up-empty { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-1) 0; flex-wrap: wrap; }
+  .timeline { display: grid; position: relative; }
+  .tl-row { grid-template-columns: 14px 110px minmax(0, 1fr) 190px 70px; min-height: 40px; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--violet-soft); justify-self: center; }
+  .tl-more summary { list-style: none; display: inline-flex; margin-top: var(--s-2); cursor: pointer; }
+  .tl-more summary::-webkit-details-marker { display: none; }
+  .tl-empty { padding: var(--s-6) 0; }
+  .notes-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+  .rec .late { color: var(--attn); }
+  .nowrap { white-space: nowrap; }
+  .rec .prop dd.col { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .consent-v svg { flex: none; } .consent-v.ok svg, .consent-v.off svg { color: var(--ink-3); }
+  .rec .link-v { color: var(--violet-deep); font-weight: 600; }
+  .ra-why { display: flex; align-items: center; gap: 5px; flex-basis: 100%; margin: 0; }
+  .rec .prop dd a:hover { color: var(--violet-deep); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rail-links { display: grid; margin-top: var(--s-5); }
+  .rail-links .btn { justify-content: space-between; }
+  .rec .prop { grid-template-columns: 104px minmax(0, 1fr); }
+  .rec .d-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  @media (max-width: 960px) { .rec { margin: calc(var(--s-4) * -1) calc(var(--s-4) * -1) calc(var(--s-8) * -1); } .rec-main { padding: var(--s-4) var(--s-4) var(--s-6); } }
+  @media (max-width: 900px) {
+    .rec-head { align-items: flex-start; }
+    .rec-actions { width: 100%; } .rec-actions .btn { flex: 1; padding: 0 10px; } .rec-actions .ra-book { flex: 1.2; } .rec-actions .ra-more { flex: none; width: 44px; padding: 0; }
+    .dash-note { grid-template-columns: 28px minmax(0, 1fr); } .dash-note .btn { grid-column: 2; justify-self: start; }
+    .up-row { grid-template-columns: 16px minmax(0, 1fr) auto; padding: 6px 0; } .up-when { grid-column: 2; } .up-row .truncate { grid-column: 2; grid-row: 2; } .up-amt { grid-column: 3; grid-row: 1 / span 2; }
+    .tl-row { grid-template-columns: 84px minmax(0, 1fr) 64px; column-gap: var(--s-3); row-gap: 0; padding: 6px 0; } .tl-dot { display: none; } .tl-date { grid-column: 1; } .tl-svc { grid-column: 2; min-width: 0; } .tl-amt { grid-column: 3; grid-row: 1; } .tl-gap { grid-column: 2 / span 2; grid-row: 2; }
+    .rec .btn, .rec .btn-sm, .rec .icon-btn { min-height: 44px; }
+    .rec .btn-sm { padding: 0 14px; }
+    .rec-nav-b .icon-btn { min-height: 44px; }
+  }
+</style>

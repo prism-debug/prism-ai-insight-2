@@ -1,0 +1,33 @@
+---
+import { service } from '../../data/salon.ts';
+import { money, dateShort, plural } from '../../lib/format.ts';
+import { DAY } from '../../data/clock.ts';
+import type { Visit } from '../../data/types.ts';
+interface Props { visits: Visit[]; first: string }
+const { visits, first } = Astro.props;
+const yr = (t: number) => new Date(t).getUTCFullYear();
+const SHOW = 6;
+const items = visits.map((v, i) => ({ v, gap: visits[i + 1] ? Math.round((v.t - visits[i + 1].t) / DAY) : null }));
+const head = items.slice(0, SHOW), rest = items.slice(SHOW);
+---
+{visits.length === 0 ? (
+  <div class="empty tl-empty"><strong>No visits yet</strong><span>{first}'s history will appear here after the first appointment is checked out.</span></div>
+) : (
+  <>
+  <ol class="timeline">
+    {head.map(({ v, gap }) => (
+      <li class="tl-row"><span class="tl-dot" aria-hidden="true"></span><span class="tl-date tnum">{dateShort(v.t)}, {yr(v.t)}</span><span class="tl-svc">{service(v.serviceId).name}</span><span class="tl-gap muted t-small tnum">{gap ? `${Math.round(gap / 7)} wk after the one before` : 'First visit'}</span><span class="tl-amt tnum strong">{money(v.v)}</span></li>
+    ))}
+  </ol>
+  {rest.length > 0 && (
+    <details class="tl-more">
+      <summary class="btn btn-sm btn-quiet">Show {plural(rest.length, 'earlier visit')}</summary>
+      <ol class="timeline">
+        {rest.map(({ v, gap }) => (
+          <li class="tl-row"><span class="tl-dot" aria-hidden="true"></span><span class="tl-date tnum">{dateShort(v.t)}, {yr(v.t)}</span><span class="tl-svc">{service(v.serviceId).name}</span><span class="tl-gap muted t-small tnum">{gap ? `${Math.round(gap / 7)} wk after the one before` : 'First visit'}</span><span class="tl-amt tnum strong">{money(v.v)}</span></li>
+        ))}
+      </ol>
+    </details>
+  )}
+</>
+)}

@@ -1,0 +1,34 @@
+---
+import Avatar from '../Avatar.astro';
+import StatusIcon from '../StatusIcon.astro';
+import type { RequestView } from '../../data/bookings.ts';
+import { stylist } from '../../data/salon.ts';
+import { dayLabel, fmtMin } from '../../data/bookings-core.ts';
+interface Props { r: RequestView }
+const { r } = Astro.props;
+const state = r.status;
+const noComma = (s: string) => s.replace(',', '');
+const sg = r.suggestion;
+const askedOpt = r.reqLabels.length ? noComma(r.reqLabels[0]) + (r.reqClosed.length && r.reqLabels[0].startsWith(r.reqClosed[0]) ? ' (closed)' : '') : '';
+const asked = askedOpt ? 'Asked ' + askedOpt : 'No time requested';
+// One line: what the guest asked, then what Joy proposes (weekday only when it is the same day).
+const sgDay = sg ? (sg.day === r.firstDay ? dayLabel(sg.day).split(',')[0] : noComma(dayLabel(sg.day))) : '';
+const sgTxt = sg ? `${r.awaiting ? 'Joy booked' : 'Joy suggests'} ${sgDay} ${fmtMin(sg.min)} · ${stylist(sg.stylist).name.split(' ')[0]}` : '';
+const line = state === 'pending' ? (sgTxt ? `${asked} → ${sgTxt}` : `${asked} → no gap found`) : asked;
+---
+<div class="row req" data-req={r.id} data-state={state} data-grp={r.bucket} data-text={`${r.name} ${r.svcName} ${r.stylistName}`.toLowerCase()}>
+  <Avatar name={r.name} size="sm" />
+  <span class="req-main">
+    <span class="req-l1"><span class="name">{r.name}</span><span class="req-svc">{r.svcName}</span></span>
+    <span class="req-line" data-line title={line}>{state === 'pending' && sgTxt ? (<><span class="ln-asked">{asked}</span><span class="ln-sep"> → </span><span class="ln-sug">{sgTxt}</span></>) : line}</span>
+  </span>
+  <span class="req-ic" data-state-icon>
+    {state === 'pending'
+      ? <svg class="state-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" role="img" aria-label="Waiting for you"><title>Waiting for you</title><circle cx="7" cy="7" r="5.5" stroke="var(--watch)" stroke-width="1.5"/><path d="M7 4.2V7l1.9 1.2" stroke="var(--watch)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      : <StatusIcon state={state} />}
+  </span>
+  <span class="req-act"><button type="button" class="btn req-review" data-act="review" aria-label={`Review ${r.name}'s request`} hidden={state !== 'pending'}>Review</button><span class="req-done t-small muted" data-done hidden={state === 'pending'}>{state === 'confirmed' ? 'Confirmed' : state === 'declined' ? 'Declined' : ''}</span></span>
+</div>
+<style is:global>
+  @media (max-width: 900px) { .row.req .ln-asked, .row.req .ln-sep { display: none; } }
+</style>

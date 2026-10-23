@@ -1,0 +1,22 @@
+---
+import { LIFE } from '../../data/retention.ts';
+import { money } from '../../lib/format.ts';
+const colour: Record<string, string> = { active: 'var(--d-teal)', at_risk: 'var(--d-orange)', lapsed: 'var(--d-mint)' };
+const total = LIFE.reduce((a, l) => a + l.n, 0);
+const meaning: Record<string, string> = { active: 'Booked within their usual gap', at_risk: 'Past their usual gap, not yet lapsed', lapsed: 'Gone well past their usual gap' };
+---
+<div class="lc-bar" role="img" aria-label={LIFE.map((l) => `${l.label} ${l.n} clients`).join(', ')}>
+  {LIFE.map((l) => <span tabindex="0" style={`flex:${l.n};background:${colour[l.key]}`} data-tip={`${l.label}|Clients~${l.n} (${Math.round((l.n / total) * 100)}%)|Next visits worth~${money(l.value)}|${l.rule}`}></span>)}
+</div>
+<ul class="lc-legend" aria-label="Legend">
+  {LIFE.map((l) => <li><i style={`background:${colour[l.key]}`}></i>{l.label}</li>)}
+</ul>
+<style>
+  .lc-bar { display: flex; height: 10px; border-radius: 8px; gap: 2px; margin: var(--s-3) 0; }
+  .lc-bar span { min-width: 6px; outline: none; transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  .lc-bar:hover span:not(:hover) { opacity: .5; }
+  .lc-bar span:hover, .lc-bar span:focus-visible { transform: scaleY(1.5); }
+  .lc-legend { display: flex; gap: var(--s-4); flex-wrap: wrap; font-size: var(--t-12); color: var(--ink-2); margin-bottom: var(--s-1); }
+  .lc-legend li { display: inline-flex; align-items: center; gap: 6px; }
+  .lc-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>

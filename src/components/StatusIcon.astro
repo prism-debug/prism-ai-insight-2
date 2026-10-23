@@ -1,0 +1,34 @@
+---
+// State is an icon shape plus colour (bar 3), never a text pill alone.
+interface Props { state: string; size?: number; label?: string }
+const { state, size = 14, label } = Astro.props;
+const S: Record<string, { c: string; shape: 'dashed' | 'half' | 'arc' | 'check' | 'ring-minus' | 'filled' | 'ring' | 'dot' | 'cross'; title: string }> = {
+  not_answered: { c: 'var(--attn)', shape: 'dashed', title: 'Not answered' },
+  needs_person: { c: 'var(--watch)', shape: 'half', title: 'Needs a person' },
+  joy_handling: { c: 'var(--joy)', shape: 'arc', title: 'Joy is handling' },
+  booked: { c: 'var(--good)', shape: 'check', title: 'Booked' },
+  went_quiet: { c: 'var(--ink-4)', shape: 'ring-minus', title: 'Went quiet' },
+  active: { c: 'var(--good)', shape: 'filled', title: 'Active' },
+  at_risk: { c: 'var(--watch)', shape: 'half', title: 'At risk' },
+  lapsed: { c: 'var(--attn)', shape: 'ring', title: 'Lapsed' },
+  prospect: { c: 'var(--ink-4)', shape: 'dashed', title: 'New' },
+  pending: { c: 'var(--watch)', shape: 'half', title: 'Pending' },
+  confirmed: { c: 'var(--violet)', shape: 'arc', title: 'Confirmed' },
+  done: { c: 'var(--good)', shape: 'check', title: 'Done' },
+  declined: { c: 'var(--ink-4)', shape: 'cross', title: 'Declined' },
+  connected: { c: 'var(--good)', shape: 'check', title: 'Connected' },
+  off: { c: 'var(--ink-4)', shape: 'ring', title: 'Off' },
+};
+const s = S[state] ?? S.off;
+---
+<svg class="state-icon" width={size} height={size} viewBox="0 0 14 14" fill="none" role="img" aria-label={label ?? s.title}>
+  <title>{label ?? s.title}</title>
+  {s.shape === 'dashed' && <circle cx="7" cy="7" r="5.5" stroke={s.c} stroke-width="1.5" stroke-dasharray="2.4 2.2" />}
+  {s.shape === 'ring' && <circle cx="7" cy="7" r="5.5" stroke={s.c} stroke-width="1.5" />}
+  {s.shape === 'ring-minus' && <><circle cx="7" cy="7" r="5.5" stroke={s.c} stroke-width="1.5" /><path d="M4.8 7h4.4" stroke={s.c} stroke-width="1.5" stroke-linecap="round" /></>}
+  {s.shape === 'half' && <><circle cx="7" cy="7" r="5.5" stroke={s.c} stroke-width="1.5" /><path d="M7 3.6a3.4 3.4 0 0 1 0 6.8z" fill={s.c} /></>}
+  {s.shape === 'arc' && <><circle cx="7" cy="7" r="5.5" stroke={s.c} stroke-width="1.5" /><path d="M7 7V3.6A3.4 3.4 0 1 1 3.6 7z" fill={s.c} /></>}
+  {s.shape === 'filled' && <circle cx="7" cy="7" r="6" fill={s.c} />}
+  {s.shape === 'check' && <><circle cx="7" cy="7" r="6" fill={s.c} /><path d="M4.4 7.2l1.9 1.9 3.3-3.8" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></>}
+  {s.shape === 'cross' && <><circle cx="7" cy="7" r="5.5" stroke={s.c} stroke-width="1.5" /><path d="M5 5l4 4M9 5l-4 4" stroke={s.c} stroke-width="1.5" stroke-linecap="round" /></>}
+</svg>

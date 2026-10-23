@@ -1,0 +1,26 @@
+---
+import Icon from '../../Icon.astro';
+import Fill from '../Fill.astro';
+import { SALON } from '../../../data/salon.ts';
+import { BUSINESS } from '../../../data/brand.ts';
+import { SITE_PAGES, CHANNELS } from '../../../data/onboarding.ts';
+---
+<Fill title="Website" need={['website']}>
+  <div class="ob-filerow big">
+    <span class="ob-tile-ic"><Icon name="globe" size={16} /></span>
+    <span class="truncate"><strong data-chip-name="website">{SALON.site}</strong><small>18 pages read · last read today at {SALON.booking.lastSync}</small></span>
+    <button type="button" class="btn" data-reread><Icon name="refresh-cw" size={14} />Read again</button>
+  </div>
+  <div class="ob-fields c2">
+    <div class="field"><span>Pages Joy can use</span>
+      <div class="ob-chips" role="group" aria-label="Pages Joy can use">{SITE_PAGES.map((p) => <button type="button" class="chip" aria-pressed={String(p.on)}>{p.label}</button>)}</div>
+    </div>
+    <label class="field">Booking link<span class="ob-lock"><input class="input" value={BUSINESS.booking.replace('https://', '')} readonly /><Icon name="lock" size={13} /></span></label>
+  </div>
+</Fill>
+
+<Fill title="Channels Joy answers">
+  <div class="ob-fields c2">
+    {CHANNELS.map((c) => <label class="ob-toggle"><span><strong>{c.label}</strong><small>{c.hint}</small></span><input type="checkbox" class="switch" checked={c.on} disabled={c.waiting} /></label>)}
+  </div>
+</Fill>

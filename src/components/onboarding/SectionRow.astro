@@ -1,0 +1,15 @@
+---
+import Icon from '../Icon.astro';
+import { src, type Section } from '../../data/onboarding.ts';
+interface Props { section: Section }
+const { section: s } = Astro.props;
+const hint = s.sources.length ? `Waiting for ${src(s.sources[0]).ask}` : 'Opens when the other sections are confirmed';
+---
+<li>
+  <a class="ob-row" href={`/onboarding/${s.slug}`} data-card={s.slug} data-status="todo">
+    <span class="ob-num tnum">{String(s.n).padStart(2, '0')}</span>
+    <span class="ob-row-t"><strong>{s.title}</strong><small data-row-hint>{hint}</small></span>
+    <span class="tag off" data-status-tag>Not started</span>
+    <span class="ob-row-cta"><span data-cta>Start</span><Icon name="arrow-right" size={14} /></span>
+  </a>
+</li>

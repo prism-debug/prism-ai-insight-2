@@ -1,0 +1,259 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import Tag from '../components/Tag.astro';
+import TabMenu from '../components/settings/TabMenu.astro';
+import { SALON, STYLISTS } from '../data/salon.ts';
+import { BUSINESS, SERVICE_ROWS, POLICIES, VOICE, FAQS, DOCS, GAPS } from '../data/brand.ts';
+import { dow } from '../data/clock.ts';
+import { NOW } from '../data/clock.ts';
+import { first } from '../lib/format.ts';
+
+const hr = (h: number) => (h === 12 ? '12 pm' : h > 12 ? `${h - 12} pm` : `${h} am`);
+const hours = SALON.hours.map((h) => ({ ...h, text: h.open ? `${hr(h.open[0])} to ${hr(h.open[1])}` : 'Closed' }));
+const facts = {
+  today: dow(NOW),
+  hours: hours.map((h) => ({ d: h.d, label: h.label, text: h.text })),
+  services: SERVICE_ROWS.map((s) => ({ id: s.id, name: s.name })),
+};
+const tabs = [
+  { id: 'business', label: 'Business' }, { id: 'services', label: 'Services and prices' }, { id: 'hours', label: 'Hours and policies' },
+  { id: 'voice', label: 'Brand rules' }, { id: 'faqs', label: 'FAQs', count: FAQS.length }, { id: 'docs', label: 'Documents', count: DOCS.length },
+];
+const priced = SERVICE_ROWS.length;
+const known = priced + FAQS.length + 4 + 3;
+---
+<AppShell title="Brand Hub" active="brand" description="The structured facts Joy uses everywhere: business details, prices, hours, policies, voice and FAQs.">
+  <div class="bh" data-view-root>
+    <header class="bh-title">
+      <div>
+        <h1 class="t-title">Brand Hub</h1>
+        <p class="t-small muted measure hide-m">The facts Joy answers from, in fields instead of a box of prompt text. Joy never quotes a price that isn’t here.</p>
+      </div>
+      <button type="button" class="btn only-m bh-test-btn" data-open-view="test"><Icon name="flask-conical" size={15} />Test Joy</button>
+    </header>
+
+    <div class="bh-sum"><span class="t-small muted tnum">{known} facts known · {VOICE.never.length} never-say rules</span><button type="button" class="btn" data-open-view="gaps">Gaps Joy could not answer <b class="tnum" data-gaps-n>{GAPS.length}</b></button></div>
+    <TabMenu name="bh" label="Brand Hub section" current="Business" items={[{ id: 'test', label: 'Test Joy', view: 'test' }, { id: 'gaps', label: 'Gaps Joy could not answer', view: 'gaps' }, ...tabs]} />
+    <div class="bh-grid">
+      <div class="bh-main">
+        <div class="bh-tabs tabs has-tm" data-tabs role="tablist" aria-label="Brand Hub sections">
+          {tabs.map((t) => <button class="tab" role="tab" data-panel={t.id} aria-selected="false">{t.label}{t.count != null && <span class="count">{t.count}</span>}</button>)}
+        </div>
+
+        <section class="bh-panel" data-panel-id="business" aria-label="Business">
+          <header class="bh-head"><h2 class="t-head">Business</h2><span class="t-meta">Joy uses these for directions, parking and booking links</span></header>
+          <div class="bh-form">
+            <p class="field wide bh-link"><Icon name="info" size={14} /><a class="link" href="/settings">Business details live in Settings</a><span class="t-small muted">Name, phone, address and time zone are edited in one place.</span></p>
+            <label class="field wide">Parking<textarea class="textarea" id="f-parking" data-save data-label="Parking" rows="2">{BUSINESS.parking}</textarea></label>
+            <label class="field wide">Landmarks<span class="hint">How a guest finds the door</span><textarea class="textarea" data-save data-label="Landmarks" rows="2">{BUSINESS.landmarks}</textarea></label>
+            <label class="field wide">Booking link<span class="hint">Joy sends this when someone wants to book on their own</span><input class="input" id="f-booking" data-save data-label="Booking link" value={BUSINESS.booking} /></label>
+          </div>
+        </section>
+
+        <section class="bh-panel" data-panel-id="services" aria-label="Services and prices" hidden>
+          <header class="bh-head"><h2 class="t-head">Services and prices</h2><span class="t-meta">Edits save as you go. Clear a price and Joy will hand that question to a person.</span></header>
+          <div class="list" id="svc-table">
+            <div class="row head bh-svc"><span class="cell">Service</span><span class="cell right">Price</span><span class="cell hide-m">From</span><span class="cell right hide-m">Minutes</span><span class="cell hide-m">Consult</span><span class="cell right hide-m">Rebook (days)</span><span class="cell hide-m">Stylists</span></div>
+            {SERVICE_ROWS.map((s) => (
+              <div class="row bh-svc" data-svc={s.id} data-name={s.name}>
+                <span class="cell"><span class="name">{s.name}</span></span>
+                <span class="cell right"><span class="money-in"><span aria-hidden="true">$</span><input class="input sm tnum" type="number" min="0" inputmode="numeric" data-save data-field="price" data-label={`${s.name} price`} value={s.price} aria-label={`${s.name} price`} /></span></span>
+                <span class="cell hide-m"><label class="mini"><input type="checkbox" class="check" data-save data-field="from" data-label={`${s.name} “from” flag`} checked={!!s.fromPrice} />from</label></span>
+                <span class="cell right hide-m"><input class="input sm tnum" type="number" min="5" step="5" data-save data-field="minutes" data-label={`${s.name} duration`} value={s.minutes} aria-label={`${s.name} minutes`} /></span>
+                <span class="cell hide-m"><label class="mini"><input type="checkbox" class="check" data-save data-field="consult" data-label={`${s.name} consult rule`} checked={!!s.consult} />required</label></span>
+                <span class="cell right hide-m"><input class="input sm tnum" type="number" min="7" data-save data-field="rebook" data-label={`${s.name} rebook interval`} value={s.rebookDays} aria-label={`${s.name} rebook days`} /></span>
+                <span class="cell hide-m sub truncate" title={s.stylists.join(', ')}>{s.stylists.map(first).join(', ')}</span>
+              </div>
+            ))}
+          </div>
+          <p class="bh-note t-small muted"><Icon name="shield-check" size={14} />A “from” price is quoted as “from $X”. A required consult means Joy offers a consult before a time. Joy never quotes a price that isn’t here.</p>
+        </section>
+
+        <section class="bh-panel" data-panel-id="hours" aria-label="Hours and policies" hidden>
+          <header class="bh-head"><h2 class="t-head">Hours and policies</h2><span class="t-meta">Hours come from {SALON.booking.system}, synced {SALON.booking.lastSync}</span></header>
+          <dl class="bh-hours">
+            {hours.map((h) => <div class={h.d === dow(NOW) ? 'today' : ''}><dt>{h.label}{h.d === dow(NOW) && <span class="tag violet">Today</span>}</dt><dd class="tnum">{h.text}</dd></div>)}
+          </dl>
+          <div class="bh-form">
+            <label class="field wide">Cancellation<textarea class="textarea" id="f-cancel" data-save data-label="Cancellation policy" rows="2">{POLICIES.cancellation}</textarea></label>
+            <label class="field wide">Deposit<textarea class="textarea" id="f-deposit" data-save data-label="Deposit policy" rows="2">{POLICIES.deposit}</textarea></label>
+            <label class="field wide">Late arrival<textarea class="textarea" id="f-late" data-save data-label="Late policy" rows="2">{POLICIES.late}</textarea></label>
+            <label class="field wide">No-shows<textarea class="textarea" data-save data-label="No-show policy" rows="2">{POLICIES.noshow}</textarea></label>
+          </div>
+        </section>
+
+        <section class="bh-panel" data-panel-id="voice" aria-label="Brand rules" hidden>
+          <header class="bh-head"><h2 class="t-head">Brand rules</h2><span class="t-meta">What sets you apart, what Joy must never say, and your offer</span></header>
+          <p class="bh-note t-small muted nopad"><Icon name="info" size={14} />Voice and tone live in <a class="link" href="/joy#persona">Joy › Voice and personality</a>.</p>
+          <div class="bh-form">
+            <div class="field wide"><span>What makes you different <span class="hint">Joy works these in when they fit</span></span>
+              <ul class="bh-list" id="diff" data-list="differentiator">{VOICE.differentiators.map((d) => <li><span>{d}</span><button type="button" class="icon-btn" data-remove aria-label={`Remove: ${d}`}><Icon name="x" size={14} /></button></li>)}</ul>
+              <form class="bh-add" data-add-to="diff"><input class="input" placeholder="Add something that sets you apart" aria-label="Add a differentiator" /><button class="btn" type="submit"><Icon name="plus" size={14} />Add fact</button></form>
+            </div>
+            <div class="field wide"><span>Joy must never say <span class="hint">Checked before every message goes out</span></span>
+              <ul class="bh-list never" id="never" data-list="rule">{VOICE.never.map((d) => <li><Icon name="ban" size={14} /><span>{d}</span><button type="button" class="icon-btn" data-remove aria-label={`Remove: ${d}`}><Icon name="x" size={14} /></button></li>)}</ul>
+              <form class="bh-add" data-add-to="never"><input class="input" placeholder="For example: promise same-day availability" aria-label="Add a rule" /><button class="btn" type="submit"><Icon name="plus" size={14} />Add rule</button></form>
+            </div>
+            <label class="field wide">New-client offer<textarea class="textarea" data-save data-label="New-client offer" rows="2">{VOICE.offer}</textarea></label>
+          </div>
+        </section>
+
+        <section class="bh-panel" data-panel-id="faqs" aria-label="FAQs" hidden>
+          <header class="bh-head"><h2 class="t-head">FAQs</h2><button class="btn btn-sm" id="faq-new" type="button"><Icon name="plus" size={14} />Add a FAQ</button></header>
+          <form class="bh-inline" id="faq-form" hidden>
+            <label class="field">Question<input class="input" name="q" required placeholder="What do guests ask?" /></label>
+            <label class="field">Answer<textarea class="textarea" name="a" rows="2" required placeholder="What should Joy say?"></textarea></label>
+            <div class="bh-actions"><button class="btn btn-primary btn-sm" type="submit">Save FAQ</button><button class="btn btn-quiet btn-sm" type="button" id="faq-cancel">Cancel</button></div>
+          </form>
+          <div class="list" id="faq-list">
+            {FAQS.map((f) => (
+              <div class="bh-faq">
+                <div class="bh-faq-q"><strong>{f.q}</strong><span class="t-small muted tnum" title="How many times Joy used this answer in the last 30 days">Joy used it {f.used} times · last {f.last.toLowerCase()}</span></div>
+                <textarea class="textarea" rows="2" data-save data-label={`FAQ: ${f.q}`} aria-label={`Answer to: ${f.q}`}>{f.a}</textarea>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section class="bh-panel" data-panel-id="docs" aria-label="Documents" hidden>
+          <header class="bh-head"><h2 class="t-head">Documents</h2><button class="btn btn-sm" id="doc-up" type="button"><Icon name="upload" size={14} />Upload a file</button></header>
+          <div class="list" id="doc-list">
+            <div class="row head bh-doc"><span class="cell">File</span><span class="cell hide-m">Added</span><span class="cell right hide-m">Joy used it</span><span class="cell">State</span><span class="cell right"></span></div>
+            {DOCS.map((d) => (
+              <div class="row bh-doc" data-doc>
+                <span class="cell"><Icon name="file-text" size={15} /><span class="truncate"><span class="name">{d.name}</span> <span class="sub">{d.kind} · {d.size}</span></span></span>
+                <span class="cell muted hide-m">{d.added}</span>
+                <span class="cell right muted tnum hide-m">{d.used} times</span>
+                <span class="cell" data-state>{d.state === 'ready' ? <><StatusIcon state="done" label="Ready" /><span class="t-small">Ready</span></> : <><span class="spin" aria-hidden="true"></span><span class="t-small">Reading it</span></>}</span>
+                <span class="cell right"><button class="btn btn-quiet btn-sm btn-danger" type="button" data-doc-remove aria-label={`Remove ${d.name}`}>Remove</button></span>
+              </div>
+            ))}
+          </div>
+          <p class="bh-note t-small muted"><Icon name="info" size={14} />Joy reads these for answers that aren’t in a field. Removing a file can be undone. Prices always come from the table, never from a file.</p>
+        </section>
+      </div>
+
+      <aside class="bh-side" aria-label="Test Joy and coverage">
+        <section class="bh-panel bh-s-test" id="test-joy" aria-labelledby="h-test">
+          <header class="bh-head"><h2 class="t-head" id="h-test"><Avatar kind="joy" size="sm" /> Test Joy</h2><Tag tone="joy">Test: no real guest is messaged</Tag></header>
+          <div class="bh-chat" id="chat-log" role="log" aria-live="polite">
+            <div class="msg joy">{VOICE.greeting}</div>
+          </div>
+          <div class="bh-sugg suggest" id="chat-sugg">
+            <button type="button" data-q="How much is balayage?">How much is balayage?</button>
+            <button type="button" data-q="Are you open today?">Are you open today?</button>
+            <button type="button" data-q="Where do I park?">Where do I park?</button>
+            <button type="button" data-q="Do I need a deposit?">Do I need a deposit?</button>
+            <button type="button" data-q="How much is a toner on top?">Price of a toner?</button>
+          </div>
+          <form class="bh-chat-in" id="chat-form"><input class="input" id="chat-input" placeholder="Ask as a guest would" autocomplete="off" aria-label="Ask Joy a test question" /><button class="btn btn-primary" type="submit">Ask</button></form>
+        </section>
+
+        <section class="bh-panel bh-s-gaps" aria-labelledby="h-cov">
+          <header class="bh-head"><h2 class="t-head" id="h-cov"><span class="hide-m">Coverage</span><span class="only-m">Gaps Joy could not answer</span></h2><span class="t-meta tnum"><span id="cov-known">{known}</span> facts known · <span id="cov-gaps">{GAPS.length}</span> gaps</span></header>
+          <p class="bh-note t-small muted nopad">Questions guests asked in the last 30 days that Joy couldn’t answer. Each one was handed to a person.</p>
+          <ul class="bh-gaps" id="gaps">
+            {GAPS.map((g) => (
+              <li data-gap={g.id}>
+                <div class="gap-top"><StatusIcon state="needs_person" label="Not answered" /><span class="gap-q">{g.q}</span><span class="t-small muted tnum">{g.times}×</span><button class="gap-add" type="button" data-gap-open aria-label={`Add a fact for: ${g.q}`}>Add fact</button></div>
+                <form class="gap-form" hidden data-field={g.field}>
+                  <label class="field">{g.field}<input class="input" required placeholder={g.ph} /></label>
+                  <div class="bh-actions"><button class="btn btn-primary btn-sm" type="submit">Save to Brand Hub</button><button class="btn btn-quiet btn-sm" type="button" data-gap-cancel>Cancel</button></div>
+                </form>
+              </li>
+            ))}
+          </ul>
+          <p class="bh-empty t-small muted" id="gaps-empty" hidden>Nothing missing. New gaps show up here as guests ask.</p>
+        </section>
+      </aside>
+    </div>
+    <script type="application/json" id="brand-facts" set:html={JSON.stringify(facts)}></script>
+  </div>
+</AppShell>
+<script>import '../scripts/brand.ts';</script>
+
+<style is:global>
+  .bh .t-title { font-size: 20px; }
+  .bh { display: grid; gap: var(--s-5); max-width: none; }
+  .bh .t-title { font-size: 20px; }
+  .bh-title { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s-4); }
+  .bh-sum { display: none; }
+  .bh .link { color: var(--violet-deep); font-weight: 600; }
+  .bh-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s-6); align-items: start; }
+  .bh-main { display: grid; gap: var(--s-3); min-width: 0; }
+  .bh-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .bh-tabs .tab { flex: none; }
+  .bh-side { display: grid; gap: var(--s-5); position: sticky; top: 68px; min-width: 0; border-left: 1px solid var(--line); padding-left: var(--s-6); }
+  .bh-panel { background: var(--surface); }
+  .bh-side .bh-panel + .bh-panel { border-top: 1px solid var(--line); padding-top: var(--s-5); }
+  .bh-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 8px 0; border-bottom: 1px solid var(--line); min-height: 40px; flex-wrap: wrap; }
+  .bh-head h2 { display: flex; align-items: center; gap: var(--s-2); }
+  .bh-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); padding: var(--s-4) 0; }
+  .bh-form .wide { grid-column: 1 / -1; }
+  .bh-note { display: flex; gap: var(--s-2); align-items: flex-start; padding: var(--s-3) 0; border-top: 1px solid var(--line); }
+  .bh-note.nopad { border-top: 0; padding-bottom: 0; }
+  .bh-note svg { margin-top: 2px; flex: none; }
+  .bh-svc { --cols: minmax(120px, 1.2fr) 96px 66px 80px 92px 96px minmax(90px, 1fr); }
+  .bh-svc .cell .sub { display: none; }
+  .bh-svc .sub { margin-left: 4px; }
+  .money-in { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-3); }
+  .input.sm { height: 28px; width: 64px; text-align: right; padding: 0 8px; }
+  .mini { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-12); color: var(--ink-2); cursor: pointer; }
+  .bh-hours { display: grid; padding: var(--s-1) 0; border-bottom: 1px solid var(--line); }
+  .bh-hours > div { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .bh-hours > div:last-child { border-bottom: 0; }
+  .bh-hours dt { display: flex; gap: var(--s-2); align-items: center; color: var(--ink-2); }
+  .bh-hours dd { font-weight: 600; }
+  .bh-hours .today dt { color: var(--ink); font-weight: 600; }
+  .bh-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bh-list { display: grid; gap: 4px; }
+  .bh-list li { display: flex; align-items: center; gap: var(--s-2); padding: 4px 4px 4px 10px; border: 1px solid var(--line); border-radius: var(--r-md); font-size: var(--t-13); font-weight: 500; color: var(--ink); }
+  .bh-list li > span { flex: 1; min-width: 0; }
+  .bh-list.never li { background: var(--attn-wash); border-color: transparent; }
+  .bh-list.never li svg { color: var(--attn); flex: none; }
+  .bh-add { display: flex; gap: var(--s-2); }
+  .bh-inline { display: grid; gap: var(--s-3); padding: var(--s-4) 0; border-bottom: 1px solid var(--line); }
+  .bh-actions { display: flex; gap: var(--s-2); }
+  .bh-faq { display: grid; gap: var(--s-2); padding: var(--s-3) 0; border-bottom: 1px solid var(--line); }
+  .bh-faq:last-child { border-bottom: 0; }
+  .bh-faq-q { display: flex; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; font-size: var(--t-13); }
+  .bh-faq .textarea { min-height: 52px; }
+  .bh-doc { --cols: minmax(0, 2fr) 90px 100px 110px 90px; }
+  .bh-doc[hidden] { display: none; }
+  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--violet-soft); border-top-color: var(--violet); animation: bhspin 900ms linear infinite; }
+  @keyframes bhspin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  .bh-chat { display: grid; gap: var(--s-2); padding: var(--s-4) 0; max-height: 300px; overflow-y: auto; align-content: start; }
+  .bh-chat .msg { max-width: 88%; padding: 8px 12px; font-size: var(--t-13); border-radius: 14px; display: grid; gap: 4px; }
+  .bh-chat .msg.joy { position: relative; background: transparent; border-radius: 0; padding: 2px 0 2px 30px; max-width: 100%; color: var(--ink); }
+  .bh-chat .msg.joy::before { content: ""; position: absolute; left: 0; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--joy); }
+  .bh-chat .msg.you { justify-self: end; background: var(--sunken); border: 1px solid var(--line); border-radius: 14px 14px 4px 14px; }
+  .bh-chat .msg .why { font-size: var(--t-12); color: var(--ink-3); display: flex; gap: 5px; align-items: flex-start; }
+  .bh-sugg { padding: 0 0 var(--s-3); }
+  .bh-chat-in { display: flex; gap: var(--s-2); padding: var(--s-3) 0 0; border-top: 1px solid var(--line); }
+  .bh-gaps { display: grid; padding: var(--s-2) 0; }
+  .bh-gaps > li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .bh-gaps > li:last-child { border-bottom: 0; }
+  .gap-top { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; gap: var(--s-2); align-items: center; font-size: var(--t-13); }
+  .gap-q { font-weight: 500; }
+  .gap-add { color: var(--ink-3); font-size: var(--t-12); font-weight: 600; padding: 0 4px; min-height: 28px; border-radius: var(--r-sm); } .gap-add:hover { color: var(--violet-deep); text-decoration: underline; text-underline-offset: 3px; }
+  .gap-form { display: grid; gap: var(--s-2); padding: var(--s-3) 0 var(--s-1) 24px; }
+  .bh-empty { padding: var(--s-4) 0; }
+  @media (max-width: 1100px) { .bh-grid { grid-template-columns: minmax(0, 1fr); } .bh-side { position: static; border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: var(--s-5); } }
+  @media (max-width: 900px) {
+    .bh-form { grid-template-columns: 1fr; }
+    .bh-svc { --cols: minmax(0, 1fr) 110px; }
+    .bh-doc { --cols: minmax(0, 1fr) 96px 70px; }
+    .gap-top { grid-template-columns: 16px minmax(0, 1fr) auto auto; } .gap-add { min-height: 44px; min-width: 44px; }
+    .bh-sum { display: grid; gap: var(--s-2); } .bh-sum .btn { min-height: 44px; justify-content: space-between; width: 100%; }
+    .bh-title .bh-test-btn { min-height: 44px; display: inline-flex !important; }
+    .bh-side { display: none; border-top: 0; padding-top: 0; }
+    .bh[data-view] .bh-main { display: none; } .bh[data-view] .bh-side { display: grid; }
+    .bh[data-view="test"] .bh-s-gaps, .bh[data-view="gaps"] .bh-s-test { display: none; }
+    .bh-chat-in .input { min-height: 44px; } .bh-chat-in .btn { min-height: 44px; } .bh-sugg button { min-height: 36px; }
+  }
+  .bh-link { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; min-height: 44px; } .bh-link svg { color: var(--ink-3); }
+</style>

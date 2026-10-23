@@ -1,0 +1,8 @@
+---
+interface Props { wave: number[]; played?: number; label: string }
+const { wave, played = 0, label } = Astro.props;
+const bw = 3, gap = 2, h = 28; const w = wave.length * (bw + gap) - gap;
+---
+<svg class="wave" viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={label}>
+  {wave.map((v, i) => { const bh = Math.max(3, v * h); return <rect x={i * (bw + gap)} y={(h - bh) / 2} width={bw} height={bh} rx="1.5" class={i / wave.length < played ? 'on' : ''} />; })}
+</svg>

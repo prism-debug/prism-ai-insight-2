@@ -1,0 +1,47 @@
+---
+import Icon from '../Icon.astro';
+interface Item { id: string; label: string; count?: number; view?: string }
+interface Props { items: Item[]; name: string; label?: string; current?: string }
+const { items, name, label = 'Section', current } = Astro.props;
+const mid = `tm-${name}`;
+---
+<div class="tabmenu" data-tabmenu>
+  <button type="button" class="tm-trig" data-menu={mid} aria-haspopup="menu" aria-expanded="false" aria-label={`${label}: choose a section`}><span class="tm-cur" data-tm-label>{current ?? items[0]?.label}</span><Icon name="chevron-down" size={16} /></button>
+</div>
+<div class="menu tm-menu" id={mid} role="menu" data-tabmenu-items>
+  {items.map((i) => <button type="button" role="menuitem" class="menu-item" data-tm-go={i.view ? undefined : i.id} data-tm-view={i.view} data-tm-name={i.label} data-tm-count={i.count}>{i.label}{i.count != null && <span class="muted tnum tm-n">{i.count}</span>}</button>)}
+</div>
+<script>
+  document.querySelectorAll<HTMLElement>('[data-tabmenu]').forEach((root) => {
+    const menu = document.getElementById(root.querySelector<HTMLElement>('[data-menu]')!.dataset.menu!)!;
+    const lab = root.querySelector<HTMLElement>('[data-tm-label]')!;
+    const scope = document.querySelector<HTMLElement>('[data-view-root]');
+    const tabs = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"][data-panel]'));
+    const nameOf = (id: string) => menu.querySelector<HTMLElement>(`[data-tm-go="${id}"]`)?.dataset.tmName;
+    const cntOf = (t?: HTMLElement) => t?.querySelector('.count')?.textContent?.trim();
+    const sync = () => { if (scope?.dataset.view) return; const t = tabs.find((x) => x.getAttribute('aria-selected') === 'true'); const n = t && nameOf(t.dataset.panel!); if (n) lab.textContent = n + (cntOf(t) ? ` ${cntOf(t)}` : ''); };
+    tabs.forEach((t) => new MutationObserver(sync).observe(t, { attributes: true, attributeFilter: ['aria-selected'] }));
+    menu.addEventListener('click', (e) => {
+      const it = (e.target as HTMLElement).closest<HTMLElement>('.menu-item'); if (!it) return;
+      lab.textContent = it.dataset.tmName! + (it.dataset.tmCount ? ` ${it.dataset.tmCount}` : '');
+      if (it.dataset.tmView) { if (scope) scope.dataset.view = it.dataset.tmView; return; }
+      if (scope) delete scope.dataset.view;
+      tabs.find((t) => t.dataset.panel === it.dataset.tmGo)?.click();
+    });
+    document.addEventListener('tm-view', (e) => { const v = (e as CustomEvent).detail as string; const it = menu.querySelector<HTMLElement>(`[data-tm-view="${v}"]`); if (it) { lab.textContent = it.dataset.tmName!; if (scope) scope.dataset.view = v; } });
+    setTimeout(sync, 0);
+  });
+</script>
+<style is:global>
+  .tabmenu { display: none; }
+  .tm-trig { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); width: 100%; min-height: 44px; padding: 0 var(--s-3); border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); font-size: var(--t-14); font-weight: 600; color: var(--ink); text-align: left; }
+  .tm-trig svg { color: var(--ink-3); flex: none; }
+  .tm-trig[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .tm-menu .tm-n { margin-left: auto; font-size: var(--t-12); }
+  @media (max-width: 900px) {
+    .tabmenu { display: block; }
+    .has-tm { display: none !important; }
+    .tm-menu { min-width: calc(100vw - 32px); max-width: calc(100vw - 32px); }
+    .tm-menu .menu-item { height: 44px; font-size: var(--t-14); }
+  }
+</style>

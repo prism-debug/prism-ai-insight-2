@@ -1,0 +1,62 @@
+---
+import Icon from '../Icon.astro';
+import FilledFrom from './FilledFrom.astro';
+import JoySummary from './JoySummary.astro';
+import { SECTIONS, type Section } from '../../data/onboarding.ts';
+interface Props { section: Section }
+const { section: s } = Astro.props;
+const i = SECTIONS.indexOf(s);
+const prev = SECTIONS[i - 1], next = SECTIONS[i + 1];
+const two = (n: number) => String(n).padStart(2, '0');
+---
+<div class="ob ob-sec" data-ob-section={s.slug}>
+  <header class="ob-sec-head">
+    <div>
+      <p class="ob-eyebrow">Section {two(s.n)} of {SECTIONS.length}</p>
+      <h1 class="t-title">{s.title}</h1>
+      <p class="t-meta">Feeds: {s.feeds.join(' · ')}</p>
+    </div>
+    <div class="ob-sec-meta"><span class="tag off" data-status-tag>Not started</span><span class="t-meta">~{s.minutes} min</span></div>
+  </header>
+
+  <div class="ob-sec-grid">
+    <nav class="ob-steps" aria-label="Setup sections">
+      <div class="ob-steps-head"><span>Sections</span><span class="tnum"><span data-bind="pct">0</span>% done</span></div>
+      <a class="ob-step ob-step-files" href="/onboarding/files" data-files-step><span class="ob-dot"><Icon name="upload" size={11} sw={2.5} /></span>Your files<span class="ob-step-n tnum" data-bind="files-n">0/6</span></a>
+      <ol>
+        {SECTIONS.map((x) => (
+          <li><a class="ob-step" href={`/onboarding/${x.slug}`} data-step={x.slug} data-status="todo" aria-current={x.slug === s.slug ? 'step' : undefined}>
+            <span class="ob-dot"><span class="n tnum">{x.n}</span><Icon name="check" size={11} sw={3} class="ok" /><Icon name="clock" size={11} sw={2.5} class="wait" /><span class="rev">!</span></span>{x.title}
+          </a></li>
+        ))}
+      </ol>
+      <a class="ob-back" href="/onboarding"><Icon name="arrow-left" size={14} />Back to overview</a>
+      <label class="ob-step-select">
+        <span class="sr-only">Go to section</span>
+        <select class="select" data-step-select>
+          <option value="/onboarding">Overview</option>
+          <option value="/onboarding/files">Your files</option>
+          {SECTIONS.map((x) => <option value={`/onboarding/${x.slug}`} selected={x.slug === s.slug}>{two(x.n)} · {x.title}</option>)}
+        </select>
+      </label>
+    </nav>
+
+    <div class="ob-sec-main">
+      <FilledFrom sources={s.sources} extras={s.extras} />
+      <slot />
+    </div>
+
+    <JoySummary section={s} />
+  </div>
+
+  <footer class="ob-bar">
+    {prev ? <a class="btn" href={`/onboarding/${prev.slug}`}><Icon name="arrow-left" size={14} />Back</a> : <a class="btn" href="/onboarding/files"><Icon name="arrow-left" size={14} />Your files</a>}
+    <button type="button" class="btn hide-m" data-save-draft><Icon name="save" size={14} />Save draft</button>
+    <span class="ob-bar-gap"></span>
+    <span class="t-small muted ob-saved hide-m"><Icon name="check" size={13} />All changes saved</span>
+    <span class="t-small ob-next hide-m">Next: {next ? next.title : 'Overview'}</span>
+    {next
+      ? <button type="button" class="btn btn-black" data-confirm-next data-next={`/onboarding/${next.slug}`}><span data-confirm-next-label>Confirm &amp; next</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+      : <a class="btn btn-primary" href="/onboarding">Back to overview<Icon name="arrow-right" size={14} /></a>}
+  </footer>
+</div>

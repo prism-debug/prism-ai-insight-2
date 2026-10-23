@@ -1,0 +1,61 @@
+---
+// The impact river: the month's total counted up, then two lanes of figures drifting past (paused on hover or with
+// the button). Every figure comes from the demo salon's metrics module and is labelled as demo data.
+import Icon from '../Icon.astro';
+import { CUR, notAnsweredValue, bySource } from '../../data/metrics.ts';
+import { MONTH } from '../../data/joy.ts';
+import { WB_OK, WB_OK_VALUE } from '../../data/retention.ts';
+import { SALON } from '../../data/salon.ts';
+import { money, times, dur, num } from '../../lib/format.ts';
+
+const waiting = notAnsweredValue();
+const found = CUR.bookedValue + waiting + WB_OK_VALUE;
+const google = bySource().find((s) => s.source.id === 'google')!;
+
+type Kind = 'Revenue' | 'Impact' | 'Savings';
+// value: the number counted up; fmt picks how it prints
+const river: { kind: Kind; value: number; fmt: 'money' | 'num' | 'cents' | 'text'; text?: string; label: string }[] = [
+  { kind: 'Revenue', value: CUR.bookedValue, fmt: 'money', label: `booked from ${CUR.leadsNew} new leads in 30 days` },
+  { kind: 'Impact', value: 0, fmt: 'text', text: dur(MONTH.median), label: `Joy’s median first reply, day or night` },
+  { kind: 'Savings', value: 0, fmt: 'text', text: `${dur(CUR.firstReplyTeam ?? 0)} → ${dur(MONTH.median)}`, label: 'first-reply wait, team vs Joy' },
+  { kind: 'Revenue', value: WB_OK_VALUE, fmt: 'money', label: `of next visits found with ${WB_OK.length} overdue clients` },
+  { kind: 'Impact', value: CUR.afterHours, fmt: 'num', label: `of ${CUR.leadsNew} leads wrote while the salon was closed` },
+  { kind: 'Revenue', value: CUR.adValue, fmt: 'money', label: 'booked from Meta and Google ads, traced lead by lead' },
+  { kind: 'Impact', value: MONTH.booked, fmt: 'num', label: 'appointments booked by Joy, no one at the desk' },
+  { kind: 'Savings', value: google.spend, fmt: 'money', label: `of Google Ads spend flagged at ${times(google.back ?? 0)} back per $1` },
+  { kind: 'Revenue', value: waiting, fmt: 'money', label: `likely value in ${CUR.notAnswered} leads still waiting for a reply` },
+  { kind: 'Impact', value: MONTH.answered, fmt: 'num', label: `leads answered by Joy with a reason logged for every hand-off` },
+];
+const half = Math.ceil(river.length / 2);
+const rows = [river.slice(0, half), river.slice(half)];
+const show = (r: (typeof river)[number]) => r.fmt === 'text' ? r.text! : r.fmt === 'money' ? money(r.value) : r.fmt === 'cents' ? times(r.value) : num(r.value);
+---
+<!-- Impact river -->
+<section class="wl-river-sec" aria-labelledby="h-impact">
+  <div class="wl-wrap wl-counter">
+    <h2 class="sr-only" id="h-impact">What PRISM found in one month</h2>
+    <p class="wl-big tnum" data-count={found} data-fmt="money">{money(found)}</p>
+    <p class="wl-counter-sub">booked, waiting on a reply or ready to win back, found in one month and put in front of the owner with a next step:</p>
+    <p class="wl-counter-sub wl-counter-split"><span><b class="tnum">{money(CUR.bookedValue)}</b> booked</span> <span><b class="tnum">{money(waiting)}</b> waiting on a reply</span> <span><b class="tnum">{money(WB_OK_VALUE)}</b> ready to win back</span></p>
+    <p class="wl-note">Figures from {SALON.name}, PRISM’s demo salon: fictitious, with seeded data. Alpha salons’ results replace them as they go live.</p>
+  </div>
+  <div class="wl-river" role="list" aria-label="Impact, savings and revenue in the demo salon">
+    {rows.map((row, i) => (
+      <div class={`wl-lane ${i ? 'rev' : ''}`}>
+        {[0, 1].map((copy) => (
+          <div class="wl-lane-set" aria-hidden={copy ? 'true' : undefined}>
+            {row.map((r) => (
+              <div class={`wl-tile k-${r.kind.toLowerCase()}`} role={copy ? undefined : 'listitem'}>
+                <b class="tnum" data-count={r.fmt === 'text' ? undefined : r.value} data-fmt={r.fmt}>{show(r)}</b>
+                <span class="wl-tile-l">{r.label}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+  <div class="wl-river-ctl">
+    <button class="wl-river-toggle" type="button" id="wl-river-toggle" aria-pressed="false"><span class="i-pause"><Icon name="pause" size={14} /></span><span class="i-play"><Icon name="play" size={14} /></span><span class="wl-river-toggle-l">Pause the numbers</span></button>
+  </div>
+</section>

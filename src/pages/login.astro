@@ -1,0 +1,72 @@
+---
+import '../styles/base.css';
+import '../styles/components.css';
+import '../styles/demo.css';
+import Icon from '../components/Icon.astro';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#F5F3EF" />
+    <title>Sign in · PRISM</title>
+    <meta name="description" content="Sign in to PRISM, the growth desk for your salon. Prototype: any email works." />
+    <link rel="icon" type="image/svg+xml" href="/brand/mark-color.svg" />
+  </head>
+  <body class="login-body">
+    <main class="login">
+      <section class="login-art" aria-label="PRISM">
+        <video class="login-video" autoplay muted loop playsinline preload="auto" poster="/media/login-poster.jpg" aria-hidden="true">
+          <source src="/media/login-loop.mp4" type="video/mp4" />
+        </video>
+        <div class="login-art-shade"></div>
+        <img class="login-art-logo" src="/brand/wordmark-light-bold.svg" alt="PRISM" width="102" height="32" />
+        <div class="login-art-copy">
+          <p class="login-label">Growth desk for salons</p>
+          <p class="login-headline">See the whole salon. Do the one thing that matters.</p>
+        </div>
+      </section>
+
+      <section class="login-form-wrap">
+        <form class="login-form" id="login-form" novalidate>
+          <img class="login-mark" src="/brand/mark-color.svg" alt="PRISM" width="44" height="51" />
+          <h1>Welcome back</h1>
+          <p class="login-sub">Sign in to see what Joy and Dash did overnight.</p>
+
+          <label class="login-field">
+            <span>Email</span>
+            <input class="input" type="email" name="email" autocomplete="email" placeholder="you@salon.com" value="amara@marlowfinch.example" />
+          </label>
+          <label class="login-field">
+            <span>Password</span>
+            <input class="input" type="password" name="password" autocomplete="current-password" placeholder="Your password" value="prototype" />
+          </label>
+
+          <div class="login-row">
+            <label class="login-check"><input type="checkbox" checked /> Remember me</label>
+            <a href="/" class="login-link" data-enter>Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn btn-black login-submit"><span>Sign in</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+          <button type="button" class="btn login-google" data-enter>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.3h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2.1-1.9 3.4-4.7 3.4-8.1z"/><path fill="#34A853" d="M12 23c3 0 5.4-1 7.2-2.7l-3.5-2.7c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6-4.5H2.4v2.800A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M6 14.100a6.600 6.600 0 0 1 0-4.200V7.100H2.400a11 11 0 0 0 0 9.800z"/><path fill="#EA4335" d="M12 5.400c1.600 0 3 .6 4.100 1.600l3.100-3.100A11 11 0 0 0 2.400 7.100L6 9.900c.8-2.600 3.200-4.500 6-4.500z"/></svg>
+            Sign in with Google
+          </button>
+          <p class="login-foot">Don't have an account? <a href="/onboarding/files" class="login-link" data-enter data-to="/onboarding/files">Sign up</a></p>
+          <p class="login-proto">Prototype · fictitious salon data · any email works</p>
+        </form>
+      </section>
+    </main>
+    <script is:inline>
+      (function () {
+        function enter(e) { if (e) e.preventDefault(); try { sessionStorage.setItem('prism-in', '1'); } catch (x) {} var to = e && e.currentTarget && e.currentTarget.getAttribute && e.currentTarget.getAttribute('data-to'); location.href = to || '/'; }
+        document.getElementById('login-form').addEventListener('submit', enter);
+        document.querySelectorAll('[data-enter]').forEach(function (el) { el.addEventListener('click', enter); });
+        var v = document.querySelector('.login-video');
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches && v) { v.removeAttribute('autoplay'); v.pause(); }
+      })();
+    </script>
+    <script>import '../scripts/demo.ts';</script>
+  </body>
+</html>

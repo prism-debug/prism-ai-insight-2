@@ -1,0 +1,149 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import Tag from '../../components/Tag.astro';
+import StatusIcon from '../../components/StatusIcon.astro';
+import { FORMS, form, funnel, CONSENT_APPT, CONSENT_PROMO, FIELD_TYPES } from '../../data/forms.ts';
+import { SALON } from '../../data/salon.ts';
+import { num } from '../../lib/format.ts';
+
+export function getStaticPaths() { return FORMS.map((f) => ({ params: { id: f.id } })); }
+const { id } = Astro.params;
+const f = form(id!);
+const fn = funnel(f);
+const share = `https://${SALON.site}/f/${f.id}`;
+const embed = `<iframe src="${share}?embed=1" width="100%" height="640" style="border:0" title="${f.name}"></iframe>`;
+const state = { id: f.id, name: f.name, blurb: f.blurb, fields: f.fields, confirm: f.confirm, consentAppt: f.consentAppt, consentPromo: f.consentPromo, types: FIELD_TYPES, texts: { appt: CONSENT_APPT, promo: CONSENT_PROMO }, salon: SALON.name, cta: f.kind === 'Quiz' ? 'See my suggestion' : 'Send request' };
+---
+<AppShell title={f.name} active="forms" crumbs={[{ label: f.name }]} description={`Builder for the ${f.name} ${f.kind.toLowerCase()}: fields, live preview, consent, tracking and sharing.`}>
+  <div class="fb">
+    <header class="fb-title">
+      <div>
+        <h1 class="t-title">{f.name} {f.is_test && <Tag tone="off">Test form</Tag>}</h1>
+        <p class="t-small muted" id="fb-status-line">{f.kind} · <span id="fb-status">{f.status === 'published' ? 'Published' : f.status === 'draft' ? 'Draft' : 'Test, hidden from metrics'}</span> · updated {f.updated}</p>
+      </div>
+      <ol class="fn" aria-label="Funnel, last 30 days">
+        {fn.map((s, i) => { const none = (f.is_test && s.n === 0) || (f.id === 'meta-lead-ad' && i < 2); return <li><span class="fn-l">{s.label}</span><span class="fn-n tnum">{none ? '—' : num(s.n)}</span><span class="fn-d tnum">{s.drop == null || none || (f.id === 'meta-lead-ad' && i === 2) ? '' : `−${s.drop}%`}</span></li>; })}
+      </ol>
+    </header>
+    {f.is_test && <p class="fb-banner t-small"><Icon name="flask-conical" size={14} />This is a test {f.kind.toLowerCase()}. Its views and submissions are left out of every metric and no guest is texted.</p>}
+
+    <div class="fb-grid">
+      <section class="fb-fields" aria-labelledby="h-fields">
+        <header class="fb-h"><h2 class="t-head" id="h-fields">Fields <span class="muted tnum" id="fcount">{f.fields.length}</span></h2></header>
+        <ul class="fb-flist" id="flist"></ul>
+        <div class="fb-addrow"><select class="select" id="add-type" aria-label="Field type to add">{Object.entries(FIELD_TYPES).filter(([k]) => k !== 'consent').map(([k, v]) => <option value={k}>{v}</option>)}</select><button class="btn" id="add-field" type="button"><Icon name="plus" size={14} />Add field</button></div>
+      </section>
+
+      <section class="fb-center" aria-labelledby="h-prev">
+        <header class="fb-h"><h2 class="t-head" id="h-prev">Live preview</h2>
+          <div class="seg" role="group" aria-label="Preview size"><button type="button" data-dev="desktop" aria-pressed="true"><Icon name="monitor" size={13} />Desktop</button><button type="button" data-dev="phone" aria-pressed="false"><Icon name="smartphone" size={13} />Phone</button></div>
+        </header>
+        <div class="fb-stage" id="stage" data-dev="desktop"><div class="fb-device" id="device"><div class="pv" id="preview"></div></div></div>
+        <div class="fb-after"><span class="t-small strong">After they submit</span><p class="t-small muted" id="after">{f.confirm}</p></div>
+      </section>
+
+      <aside class="fb-props aside" aria-label="Properties">
+        <h2 class="props-title">Status</h2>
+        <dl>
+          <div class="prop"><dt>State</dt><dd><select class="select" id="status" aria-label="Form state"><option value="published" selected={f.status === 'published'}>Published</option><option value="draft" selected={f.status === 'draft'}>Draft</option><option value="test" selected={f.status === 'test'}>Test (hidden from metrics)</option></select></dd></div>
+          <div class="prop"><dt>Counts in metrics</dt><dd id="counts">{f.is_test ? 'No' : 'Yes'}</dd></div>
+        </dl>
+
+        <h2 class="props-title">Consent for texts</h2>
+        <label class="fb-sw"><input type="checkbox" class="switch" id="c-appt" checked={f.consentAppt} /><span>Appointment texts</span></label>
+        <p class="fb-consent" id="t-appt">{CONSENT_APPT}</p>
+        <label class="fb-sw"><input type="checkbox" class="switch" id="c-promo" checked={f.consentPromo} /><span>Promotional texts</span></label>
+        <p class="fb-consent" id="t-promo">{CONSENT_PROMO}</p>
+        <p class="t-small muted">Wording is fixed so every opt-in includes “Reply STOP to opt out”. Joy checks it before any text.</p>
+
+        <h2 class="props-title">Tracking</h2>
+        <label class="fb-sw"><input type="checkbox" class="switch" data-track="UTM parameters" checked={f.utm} /><span>Capture UTM parameters</span></label>
+        <label class="fb-sw"><input type="checkbox" class="switch" data-track="Click ID" checked={f.clickId} /><span>Capture ad click ID (fbclid, gclid)</span></label>
+        <label class="field fb-pixel">Pixel or tag<input class="input" id="pixel" value={f.pixel} /></label>
+
+        <h2 class="props-title">Confirmation message</h2>
+        <textarea class="textarea" id="confirm" rows="3" aria-label="Confirmation message">{f.confirm}</textarea>
+
+        <h2 class="props-title">Share</h2>
+        <div class="fb-copy"><code class="fb-code" id="share">{share}</code><button class="btn btn-sm" type="button" data-copy="share">Copy link</button></div>
+        <h2 class="props-title">Embed on your site</h2>
+        <div class="fb-copy col"><code class="fb-code" id="embed">{embed}</code><button class="btn btn-sm" type="button" data-copy="embed">Copy snippet</button></div>
+
+        <div class="fb-danger">
+          <button class="btn" type="button" id="unpublish" hidden={f.status !== 'published'}>Unpublish</button>
+          <button class="btn btn-danger" type="button" id="delete">Delete form</button>
+        </div>
+      </aside>
+    </div>
+    <div class="fb-gone" id="gone" hidden><strong>This form is deleted.</strong><span class="t-small muted">Its link no longer works. Use Undo in the message below to bring it back.</span></div>
+    <script type="application/json" id="fb-state" set:html={JSON.stringify(state)}></script>
+  </div>
+</AppShell>
+<script>import '../../scripts/forms.ts';</script>
+
+<style is:global>
+  .fn { display: flex; gap: var(--s-5); }
+  .fn li { display: grid; grid-template-columns: auto auto; column-gap: 6px; align-items: baseline; font-size: var(--t-12); min-width: 82px; }
+  .fn-l { color: var(--ink-3); grid-column: 1 / -1; }
+  .fn-n { font-size: var(--t-14); font-weight: 600; color: var(--ink); }
+  .fn-d { color: var(--ink-3); font-weight: 600; }
+  .fb { display: grid; gap: var(--s-4); }
+  .fb-title { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-4); flex-wrap: wrap; }
+  .fb-title h1 { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+  .fb-banner { display: flex; gap: var(--s-2); align-items: center; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--ink-2); }
+  .fb-grid { display: grid; grid-template-columns: 250px minmax(0, 1fr) 320px; border-top: 1px solid var(--line); margin: 0 calc(-1 * var(--s-6)); }
+  .fb-grid > * { padding: var(--s-4) var(--s-5); min-width: 0; }
+  .fb-fields { border-right: 1px solid var(--line); }
+  .fb-props { border-left: 1px solid var(--line); background: var(--surface); }
+  .fb-h { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); padding-bottom: var(--s-3); min-height: 40px; }
+  .fb-flist { display: grid; }
+  .fb-flist li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--s-2); padding: 8px 0; border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .fb-flist .f-name { font-weight: 600; display: block; }
+  .fb-flist .f-type { color: var(--ink-3); font-size: var(--t-12); }
+  .fb-flist .f-ctl { display: flex; align-items: center; gap: 2px; grid-column: 1 / -1; }
+  .fb-flist .f-req { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-12); color: var(--ink-2); margin-right: auto; cursor: pointer; }
+  .fb-flist .icon-btn { width: 26px; height: 26px; }
+  .fb-flist .icon-btn[disabled] { opacity: .3; pointer-events: none; }
+  .fb-addrow { display: grid; gap: var(--s-2); padding-top: var(--s-3); }
+  .fb-stage { background: var(--canvas); border-radius: var(--r-lg); padding: var(--s-6) var(--s-4); display: grid; justify-items: center; }
+  .fb-device { width: 100%; max-width: 540px; transition: max-width var(--dur) var(--ease); }
+  .fb-stage[data-dev="phone"] .fb-device { max-width: 340px; border: 8px solid var(--black); border-radius: 28px; overflow: hidden; background: var(--surface); }
+  .pv { background: var(--surface); border-radius: var(--r-lg); padding: var(--s-6); display: grid; gap: var(--s-4); }
+  .fb-stage[data-dev="phone"] .pv { border-radius: 0; padding: var(--s-4); }
+  .pv h3 { font-size: var(--t-18); font-weight: 600; letter-spacing: -.01em; }
+  .pv .pv-brand { display: flex; align-items: center; gap: var(--s-2); font-size: var(--t-12); font-weight: 600; color: var(--ink-2); }
+  .pv .pv-brand i { width: 22px; height: 22px; border-radius: 7px; background: var(--violet); display: block; }
+  .pv .pv-field { display: grid; gap: 5px; font-size: var(--t-12); font-weight: 600; color: var(--ink-2); }
+  .pv .pv-field .req { color: var(--attn); }
+  .pv .pv-ph { height: 36px; border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); padding: 0 10px; display: flex; align-items: center; color: var(--ink-3); font-weight: 400; font-size: var(--t-13); }
+  .pv .pv-ph.tall { height: 72px; align-items: flex-start; padding-top: 8px; }
+  .pv .pv-ph.photo { border-style: dashed; justify-content: center; gap: 6px; }
+  .pv .pv-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pv .pv-opt { border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: 6px 12px; font-size: var(--t-13); font-weight: 500; color: var(--ink); }
+  .pv .pv-consent { display: grid; grid-template-columns: 16px 1fr; gap: 8px; font-size: 11px; line-height: 1.4; color: var(--ink-2); font-weight: 400; }
+  .pv .pv-consent i { width: 15px; height: 15px; border: 1.5px solid var(--line-strong); border-radius: 4px; margin-top: 1px; }
+  .pv .pv-btn { height: 40px; border-radius: var(--r-pill); background: var(--black); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: var(--t-13); }
+  .pv .pv-empty { color: var(--ink-3); font-size: var(--t-13); text-align: center; padding: var(--s-6) 0; }
+  .fb-after { padding-top: var(--s-3); display: grid; gap: 2px; }
+  .fb-props .props-title { margin-top: var(--s-5); }
+  .fb-sw { display: flex; align-items: center; gap: var(--s-2); min-height: 32px; font-size: var(--t-13); font-weight: 500; cursor: pointer; }
+  .fb-consent { font-size: var(--t-12); color: var(--ink-2); background: var(--sunken); border-radius: var(--r-md); padding: 8px 10px; margin: 2px 0 var(--s-2); line-height: 1.45; }
+  .fb-consent.off { opacity: .45; }
+  .fb-pixel { margin-top: var(--s-2); }
+  .fb-copy { display: flex; gap: var(--s-2); align-items: flex-start; }
+  .fb-copy.col { flex-direction: column; align-items: stretch; }
+  .fb-code { display: block; flex: 1; min-width: 0; font-family: var(--font); font-size: var(--t-12); background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r-md); padding: 8px 10px; overflow-wrap: anywhere; user-select: all; color: var(--ink-2); }
+  .fb-danger { display: flex; gap: var(--s-2); margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--line); }
+  .fb-gone { display: grid; gap: 2px; padding: var(--s-4) 0; border-top: 1px solid var(--line); }
+  .fb.deleted .fb-grid { opacity: .4; pointer-events: none; }
+  @media (max-width: 1180px) { .fb-grid { grid-template-columns: 230px minmax(0, 1fr); } .fb-props { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); } }
+  @media (max-width: 900px) {
+    .fn { gap: var(--s-3); } .fn li { min-width: 0; flex: 1; }
+    .fb-title { flex-direction: column; } .fb-title .fn { width: 100%; }
+    .fb-grid { grid-template-columns: minmax(0, 1fr); margin: 0 calc(-1 * var(--s-4)); }
+    .fb-fields { border-right: 0; border-bottom: 1px solid var(--line); }
+    .fb-grid > * { padding: var(--s-4); }
+    .fb-stage { padding: var(--s-4) var(--s-2); }
+  }
+</style>

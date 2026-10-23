@@ -1,0 +1,28 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import StatusIcon from '../StatusIcon.astro';
+import type { Lead } from '../../data/types.ts';
+import { service, source } from '../../data/salon.ts';
+import { money } from '../../lib/format.ts';
+import { STATUS_LABEL, waitShort, channelIcon, ownerName, isUrgent, isWaiting, waitMs, topReason, handler, JOY_PAUSED_WHY } from '../../data/leads.ts';
+interface Props { lead: Lead }
+const { lead: l } = Astro.props;
+const h = handler(l.status, l.ownerId, l.channel); const late = isUrgent(l); const wait = waitMs(l);
+const text = `${l.name} ${service(l.serviceId).name} ${source(l.sourceId).name} ${l.phone} ${l.tags.join(' ')}`.toLowerCase();
+---
+<div class="row lead-row" data-row data-id={l.id} data-href={`/leads/${l.id}`} data-text={text}>
+  <span class="cell c-sel"><input class="check" type="checkbox" aria-label={`Select ${l.name}`} data-select /></span>
+  <span class="cell c-state" data-state><StatusIcon state={l.status} /></span>
+  <span class="cell c-name">
+    <a class="lead-link" href={`/leads/${l.id}`}><span class="name truncate">{l.name}</span><span class="sub truncate sv">{service(l.serviceId).name}</span></a>
+    <span class="m-line">{source(l.sourceId).name}<span data-m-owner> · {h.name}</span></span>
+  </span>
+  <span class="cell c-src muted hide-m"><Icon name={channelIcon(l.channel)} size={14} /><span class="truncate">{source(l.sourceId).name}</span></span>
+  <span class="cell c-score hide-m" title={`${l.score}: ${topReason(l)}`}><span class="tnum muted">{l.score}</span></span>
+  <span class="cell c-val right tnum hide-m">{money(l.likelyValue)}</span>
+  <span class="cell c-own hide-m" data-owner>{h.kind === 'joy' ? <><Avatar kind="joy" size="sm" /><span>Joy</span></> : h.kind === 'person' ? <><Avatar name={ownerName(l.ownerId)} size="sm" /><span class="truncate">{h.name}</span></> : <span class="muted truncate" title={h.kind === 'wait' ? 'Joy handed this over. A person has not picked it up yet.' : h.kind === 'paused' ? JOY_PAUSED_WHY : h.kind === 'none' ? 'Nobody has replied yet' : ''}>{h.name}</span>}</span>
+  <span class={`cell c-wait right tnum hide-m ${late ? 'late strong' : 'muted'}`} data-wait>{waitShort(wait)}</span>
+  <span class="cell c-trail m-only"><span class="tnum strong">{money(l.likelyValue)}</span><span class={`tnum t-small ${late ? 'late strong' : 'muted'}`} title={isWaiting(l) ? 'Waiting for a reply' : 'Since first message'}>{waitShort(wait)}</span></span>
+  <span class="cell c-act"><button class="icon-btn" data-menu="menu-row" data-row-menu aria-label={`Actions for ${l.name}`} aria-haspopup="menu"><Icon name="ellipsis" size={16} /></button></span>
+</div>

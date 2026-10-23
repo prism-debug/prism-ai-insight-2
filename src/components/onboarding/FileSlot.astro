@@ -1,0 +1,38 @@
+---
+// One requested file (or connection) on the files step. data-state: empty | uploading | reading | done | skipped.
+import Icon from '../Icon.astro';
+import { fillsFor, type Source } from '../../data/onboarding.ts';
+import { SALON } from '../../data/salon.ts';
+interface Props { source: Source }
+const { source: s } = Astro.props;
+const fills = fillsFor(s.id);
+const accept = s.id === 'photos' ? 'image/*,.zip,.heic' : s.id === 'brand' ? '.pdf,.svg,.png,.jpg,.jpeg,.ai' : '.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,image/*';
+---
+<li class="ob-slot" data-slot={s.id} data-kind={s.kind} data-state="empty">
+  <span class="ob-slot-ic" aria-hidden="true"><Icon name={s.icon} size={18} /><span class="ob-slot-done"><Icon name="check" size={12} sw={3} /></span></span>
+  <div class="ob-slot-main">
+    <div class="ob-slot-title"><strong>{s.label}</strong><span class="t-small muted hide-m">{s.accepts}</span></div>
+    <p class="t-small muted" data-when="empty skipped">{s.note ?? s.why}</p>
+    <p class="t-small ob-slot-file" data-when="uploading reading done"><Icon name={s.kind === 'file' ? 'file-text' : s.icon} size={13} /><span class="truncate" data-slot-name>{s.sample.name}</span><span class="muted" data-slot-detail>{s.sample.size && `${s.sample.size} · `}{s.sample.detail}</span></p>
+    <p class="ob-slot-fills t-meta">{s.optional ? 'Adds detail to' : 'Fills'} {fills.map((f, i) => <>{i ? (i === fills.length - 1 ? ' and ' : ', ') : ''}<a href={`/onboarding/${f.slug}`}>{f.title}</a></>)}</p>
+    {s.id === 'website' && (
+      <form class="ob-url" data-when="empty skipped" data-url-form>
+        <label class="sr-only" for="ob-url">Website address</label>
+        <input class="input" id="ob-url" type="text" inputmode="url" value={SALON.site} placeholder="yoursalon.com" autocomplete="url" />
+        <button class="btn" type="submit"><Icon name="scan-search" size={14} />Read my site</button>
+      </form>
+    )}
+  </div>
+  <div class="ob-slot-act" aria-live="polite">
+    <span data-when="empty">
+      {s.kind === 'file'
+        ? <label class="btn btn-sm"><Icon name="upload" size={14} />Upload<input class="sr-only" type="file" data-slot-input={s.id} accept={accept} multiple={s.id === 'photos'} /></label>
+        : s.id === 'phorest' ? <button type="button" class="btn btn-primary" data-pick={s.id}><Icon name="link" size={14} />Connect {SALON.booking.system}</button> : null}
+      {!s.optional && s.id !== 'phorest' && <button type="button" class="btn btn-quiet btn-sm" data-skip={s.id}>Skip</button>}
+    </span>
+    <span class="ob-slot-prog" data-when="uploading"><span class="ob-bar-mini"><i data-slot-pct></i></span><span class="t-small muted">{s.kind === 'file' ? 'Uploading' : 'Connecting'}</span></span>
+    <span class="ob-slot-prog" data-when="reading"><span class="spin" aria-hidden="true"></span><span class="t-small muted">{s.kind === 'file' ? 'Reading it…' : 'Reading…'}</span></span>
+    <span class="ob-slot-ok" data-when="done"><span class="t-small"><b class="tnum" data-slot-facts>{s.sample.facts}</b> facts found</span><button type="button" class="btn btn-quiet btn-sm" data-remove-src={s.id}>Remove</button></span>
+    <span class="ob-slot-ok" data-when="skipped"><span class="t-small muted">Skipped. You’ll type it in.</span><button type="button" class="btn btn-quiet btn-sm" data-unskip={s.id}>Undo</button></span>
+  </div>
+</li>

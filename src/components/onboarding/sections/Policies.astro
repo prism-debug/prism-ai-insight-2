@@ -1,0 +1,31 @@
+---
+import Icon from '../../Icon.astro';
+import Fill from '../Fill.astro';
+import { POLICY_FIELDS, BOOKING_TOGGLES } from '../../../data/onboarding.ts';
+---
+<Fill title="Deposits and cancellations" sub="Read from your salon policies." need={['policies']}>
+  <div class="ob-fields c4">
+    {POLICY_FIELDS.map((f) => <label class={`field ${f.missing ? 'missing' : ''}`}>{f.label}<input class="input" value={f.value} placeholder={f.missing ? 'Not set' : ''} data-missing={f.missing ? 'true' : undefined} /></label>)}
+  </div>
+  <p class="ob-inline watch" data-missing-note><Icon name="triangle-alert" size={13} />Missing: set a no-show fee, or type “No fee”, so Joy can answer guests.</p>
+</Fill>
+
+<Fill title="Booking rules" need={['policies']}>
+  <div class="ob-fields c2">
+    <div class="field"><span>Who can book with Joy</span>
+      <div class="ob-chips" data-single role="group" aria-label="Who can book with Joy">
+        <button type="button" class="chip" aria-pressed="true">Everyone</button>
+        <button type="button" class="chip" aria-pressed="false">Returning guests only</button>
+        <button type="button" class="chip" aria-pressed="false">Ask the front desk first</button>
+      </div>
+    </div>
+    <div class="field"><span>Minimum notice</span>
+      <div class="ob-chips" data-single role="group" aria-label="Minimum notice">
+        <button type="button" class="chip" aria-pressed="false">Same day</button>
+        <button type="button" class="chip" aria-pressed="true">24 hours</button>
+        <button type="button" class="chip" aria-pressed="false">48 hours</button>
+      </div>
+    </div>
+    {BOOKING_TOGGLES.map((t) => <label class="ob-toggle"><span><strong>{t.label}</strong><small>{t.hint}</small></span><input type="checkbox" class="switch" checked={t.on} /></label>)}
+  </div>
+</Fill>

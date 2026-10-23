@@ -1,0 +1,83 @@
+---
+import '../../styles/onboarding.css';
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import FileSlot from '../../components/onboarding/FileSlot.astro';
+import { SALON } from '../../data/salon.ts';
+import { SECTIONS, REQUIRED_FILES, OPTIONAL_FILES, src } from '../../data/onboarding.ts';
+const pb = SALON.booking.system;
+---
+<AppShell title="Your files" active="onboarding" crumbs={[{ label: 'Your files' }]} description={`Connect ${pb} and add a few files. Prism reads them and fills in your setup.`}>
+  <div class="ob ob-files">
+    <header class="ob-files-head">
+      <p class="ob-eyebrow">Salon setup · Connect and add files</p>
+      <h1 class="ob-h1">Connect {pb}, then add a few files</h1>
+      <p class="muted measure">{pb} brings in your services, prices and team. Your files cover the rest. Nothing goes to guests until you confirm.</p>
+    </header>
+
+    <div class="ob-files-grid">
+      <div class="ob-files-main">
+        <section class="ob-card ob-connect" aria-label={`Connect ${pb}`}>
+          <ul class="ob-slots"><FileSlot source={src('phorest')} /></ul>
+        </section>
+
+        <label class="ob-drop sm" data-drop>
+          <input class="sr-only" type="file" multiple data-drop-input accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.svg,.zip,image/*" />
+          <span class="ob-drop-ic"><Icon name="cloud-upload" size={20} /></span>
+          <strong class="ob-drop-t">Drop your files here</strong>
+          <span class="t-small muted">or <span class="ob-drop-link">choose files</span>. Prism sorts them for you. PDF, Word, JPG, PNG, CSV up to 25 MB each.</span>
+          <span class="ob-private t-small"><Icon name="lock" size={12} />Private to {SALON.name}. Never used to train models.</span>
+        </label>
+        <p class="ob-sample t-small muted">No files handy? <button type="button" class="ob-link" data-sample>Use sample files</button> to see how it works.</p>
+
+        <section class="ob-card ob-checklist" aria-labelledby="ob-list-h">
+          <header class="ob-card-head">
+            <div><h2 class="t-head" id="ob-list-h">What Prism is looking for</h2><p class="t-meta">Skip anything you don’t have. You can type it in later.</p></div>
+            <span class="tag" data-files-tag><span class="tnum" data-bind="files-n">0/{REQUIRED_FILES.length}</span> added</span>
+          </header>
+          <ul class="ob-slots">
+            {REQUIRED_FILES.map((s) => <FileSlot source={s} />)}
+            <FileSlot source={src('website')} />
+          </ul>
+          <details class="ob-opt ob-opt-files">
+            <summary><Icon name="chevron-right" size={13} class="ob-opt-chev" />Optional · {pb} covers these</summary>
+            <p class="t-small muted">{pb} already has your services, prices and team. Add a price list or team bios only if they say something {pb} doesn’t, like menu wording or stylist bios.</p>
+            <ul class="ob-slots">{OPTIONAL_FILES.map((s) => <FileSlot source={s} />)}</ul>
+          </details>
+        </section>
+
+        <ul class="ob-extra" data-extra aria-label="Other files"></ul>
+      </div>
+
+      <aside class="ob-card ob-filled" aria-labelledby="ob-filled-h">
+        <h2 class="t-head" id="ob-filled-h">What Prism has filled</h2>
+        <p class="t-meta">Updates as {pb} and each file are read.</p>
+        <ol class="ob-filled-list">
+          {SECTIONS.filter((s) => s.sources.length).map((s) => (
+            <li data-filled={s.slug} data-level="none">
+              <span class="ob-filled-dot" aria-hidden="true"></span>
+              <a href={`/onboarding/${s.slug}`}>{s.title}</a>
+              <span class="t-small muted tnum" data-filled-n>0/{s.sources.length}</span>
+            </li>
+          ))}
+        </ol>
+        <div class="ob-how">
+          <p class="ob-joy-label">How it works</p>
+          <ol>
+            <li><b>1</b>You connect {pb} and add files</li>
+            <li><b>2</b>Prism fills each section</li>
+            <li><b>3</b>You check and confirm</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="ob-bar">
+      <a class="btn btn-quiet" href="/onboarding">Skip for now</a>
+      <span class="ob-bar-gap"></span>
+      <span class="t-small muted hide-m"><span class="tnum" data-bind="facts">0</span> facts found so far</span>
+      <a class="btn btn-black" href="/onboarding" data-fill-go><span>Fill my setup</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></a>
+    </footer>
+  </div>
+</AppShell>
+<script>import '../../scripts/onboarding.ts';</script>

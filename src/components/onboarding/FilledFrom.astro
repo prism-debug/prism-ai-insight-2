@@ -1,0 +1,27 @@
+---
+// The strip at the top of every section: which files and connections filled it, and a one-click way to add whatever is missing.
+import Icon from '../Icon.astro';
+import { src, type SourceId } from '../../data/onboarding.ts';
+interface Props { sources: SourceId[]; extras?: SourceId[] }
+const { sources, extras = [] } = Astro.props;
+const list = sources.map(src);
+---
+{list.length > 0 && (
+  <div class="ob-from" data-from={sources.join(',')} data-ready="false">
+    <span class="ob-from-lead"><Icon name="wand-sparkles" size={14} /><span data-from-lead-on>Prism filled this from</span><span data-from-lead-off>Prism fills this from</span></span>
+    <ul class="ob-from-chips">
+      {list.map((s) => (
+        <li class="ob-from-chip" data-chip={s.id} data-ready="false">
+          <span class="on"><Icon name="check" size={12} /><span class="truncate" data-chip-name={s.id}>{s.sample.name}</span></span>
+          <button type="button" class="off" data-pick={s.id}><Icon name={s.kind === 'file' ? 'upload' : 'link'} size={12} />{s.kind === 'file' ? `Add ${s.ask.replace(/^your /, '')}` : `Connect ${s.ask.replace(/^your /, '')}`}</button>
+        </li>
+      ))}
+      {extras.map(src).map((s) => (
+        <li class="ob-from-chip opt" data-chip={s.id} data-ready="false">
+          <span class="on"><Icon name="check" size={12} /><span class="truncate" data-chip-name={s.id}>{s.sample.name}</span></span>
+          <button type="button" class="off" data-pick={s.id} title={s.note}><Icon name="plus" size={12} />{s.id === 'team' ? 'Optional: add team bios' : `Optional: add ${s.ask.replace(/^your /, '')} to cross-check`}</button>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}

@@ -1,0 +1,5 @@
+---
+interface Props { tone?: 'good' | 'watch' | 'attn' | 'violet' | 'joy' | 'off'; dot?: boolean }
+const { tone = 'off' } = Astro.props;
+---
+<span class={`tag ${tone}`}><slot /></span>

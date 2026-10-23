@@ -1,0 +1,24 @@
+---
+import Icon from '../../Icon.astro';
+import { SALON } from '../../../data/salon.ts';
+---
+<section class="ob-card">
+  <header class="ob-card-head"><div><h2 class="t-head">Your files</h2><p class="t-meta">Prism reads each file and pulls out facts for Joy. You confirm them in each section.</p></div><a class="btn btn-sm" href="/onboarding/files"><Icon name="list-checks" size={13} />See the checklist</a></header>
+  <label class="ob-drop sm" data-drop>
+    <input class="sr-only" type="file" multiple data-drop-input />
+    <span class="ob-drop-ic"><Icon name="cloud-upload" size={18} /></span>
+    <strong class="ob-drop-t">Drop more files here</strong>
+    <span class="t-small muted">Price lists, menus, policies, FAQs, brand guides. PDF, Word, JPG, PNG, CSV up to 25 MB each.</span>
+  </label>
+  <ul class="ob-kb" data-kb-list></ul>
+  <p class="ob-kb-empty t-small muted" data-kb-empty>No files yet. Start with the <a class="ob-link" href="/onboarding/files">files checklist</a>, so Prism knows what each one is for.</p>
+</section>
+
+<section class="ob-card">
+  <header class="ob-card-head"><div><h2 class="t-head">Private knowledge base</h2></div></header>
+  <div class="ob-filerow big">
+    <span class="ob-tile-ic"><Icon name="shield-check" size={16} /></span>
+    <span><strong>kb / marlow-finch</strong><small><span class="tnum" data-bind="facts">0</span> facts · <span class="tnum" data-bind="kb-n">0</span> files · only Joy can read this. Files are never shared with other salons or used to train models.</small></span>
+  </div>
+  <p class="t-small muted">Prices always come from {SALON.booking.system} and your services table, never from a file.</p>
+</section>

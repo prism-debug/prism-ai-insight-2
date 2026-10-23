@@ -1,0 +1,18 @@
+---
+// The <head> both launch-site pages share. canonical is the page's public address on its own domain (see the
+// host rewrites in the root netlify.toml); og:url and the absolute og:image are derived from it.
+interface Props { title: string; description: string; ogTitle: string; ogDescription: string; canonical: string }
+const { title, description, ogTitle, ogDescription, canonical } = Astro.props;
+const ogImage = new URL('/media/waitlist-feature-poster.jpg', canonical).href;
+---
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#F4F2F0" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+<meta property="og:title" content={ogTitle} />
+<meta property="og:description" content={ogDescription} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImage} />
+<link rel="icon" type="image/svg+xml" href="/brand/mark-color.svg" />

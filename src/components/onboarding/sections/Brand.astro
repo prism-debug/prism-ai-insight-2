@@ -1,0 +1,35 @@
+---
+import Icon from '../../Icon.astro';
+import Fill from '../Fill.astro';
+import { src, BRAND_COLOURS, BRAND_WORDS } from '../../../data/onboarding.ts';
+const guide = src('brand').sample, photos = src('photos').sample;
+const shots = ['Colour bar', 'Front desk', 'Balayage result', 'Styling chairs', 'Window', 'Wash station'];
+---
+<Fill title="Logo and photos" sub="Used on social posts, the website chat and confirmations." need={['brand', 'photos']}>
+  <div class="ob-files-2 ob-part" data-need="brand" data-ready="false">
+    <div class="ob-filerow"><Icon name="file-text" size={16} /><span class="truncate"><strong>Logo, primary.svg</strong><small>SVG · 24 KB</small></span><span class="ob-ok t-small"><Icon name="check" size={13} />Logo saved</span></div>
+    <div class="ob-filerow"><Icon name="file-text" size={16} /><span class="truncate"><strong data-chip-name="brand">{guide.name}</strong><small>PDF · {guide.size} · {guide.detail}</small></span><span class="ob-ok t-small"><Icon name="check" size={13} /><span class="tnum">{guide.facts}</span> facts found</span></div>
+  </div>
+  <ul class="ob-photos ob-part" data-need="photos" data-ready="false" aria-label={`${photos.detail} from ${photos.name}`}>
+    {shots.map((s) => <li><Icon name="image" size={16} /><span>{s}</span></li>)}
+  </ul>
+  <p class="t-small muted ob-part" data-need="photos" data-ready="false">Showing 6 of {photos.detail}. Placeholders in this prototype; your own photos appear here.</p>
+</Fill>
+
+<Fill title="Brand colours" sub="Pulled from your brand guide." need={['brand']}>
+  <ul class="ob-swatches">
+    {BRAND_COLOURS.map((c) => <li><i style={`background:${c.hex}`}></i><span><strong>{c.name}</strong><small class="tnum">{c.hex}</small></span></li>)}
+  </ul>
+</Fill>
+
+<Fill title="Personality" need={['brand']}>
+  <div class="ob-fields c2">
+    <div class="field"><span>Which words describe your salon?</span>
+      <div class="ob-chips" role="group" aria-label="Brand words">{BRAND_WORDS.map((w) => <button type="button" class="chip" aria-pressed={String(w.on)}>{w.label}</button>)}</div>
+    </div>
+    <label class="field">Your one-line description<span class="hint">Joy uses this when guests ask what makes you different.</span>
+      <textarea class="textarea" rows="3">A warm, expert Evanston salon known for lived-in colour and honest advice.</textarea>
+      <span class="ob-field-foot"><span class="hint">Visible to Joy</span><button type="button" class="btn btn-sm btn-dash" data-improve><Icon name="sparkles" size={13} />Improve with AI</button></span>
+    </label>
+  </div>
+</Fill>

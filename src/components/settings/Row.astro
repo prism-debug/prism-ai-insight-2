@@ -1,0 +1,5 @@
+---
+interface Props { label: string; hint?: string; for?: string }
+const { label, hint, for: f } = Astro.props;
+---
+<div class="st-row"><div class="st-l"><label class="strong" for={f}>{label}</label>{hint && <p class="t-small muted">{hint}</p>}</div><div class="st-c"><slot /></div></div>

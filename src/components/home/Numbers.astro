@@ -1,0 +1,34 @@
+---
+import Icon from '../Icon.astro';
+export interface Num { label: string; value: string; was?: string; dir?: 'up' | 'down' | 'flat'; tone?: 'good' | 'bad' | 'flat'; note?: string; sense?: string; href?: string; info?: string; basis?: string; phoneHide?: boolean }
+interface Props { items: Num[] }
+const { items } = Astro.props;
+---
+<div class="nstrip">
+  {items.map((m) => {
+    const Tag = m.href ? 'a' : 'div';
+    const cls = m.tone === 'good' ? 'up' : m.tone === 'bad' ? 'down' : 'flat';
+    const sense = m.sense ?? (m.tone === 'good' ? 'better' : m.tone === 'bad' ? 'worse' : '');
+    return (
+      <Tag class={`nm ${m.phoneHide ? 'hide-m' : ''}`} href={m.href} title={m.info}>
+        <span class="nm-label">{m.label}</span>
+        <span class="nm-value tnum">{m.value}</span>
+        <span class="nm-was tnum">
+          {m.dir && m.dir !== 'flat' && <span class={cls}><Icon name={m.dir === 'up' ? 'arrow-up-right' : 'arrow-down-right'} size={12} /></span>}
+          <span>{m.was ? `was ${m.was}${sense ? ` · ${sense}` : ''}` : (m.note ?? '')}</span>
+        </span>
+      </Tag>
+    );
+  })}
+</div>
+<style>
+  .nstrip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .nm { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: var(--surface); min-width: 0; }
+  a.nm:hover { background: var(--hover); }
+  .nm-label { font-size: var(--t-12); color: var(--ink-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nm-basis { font-size: var(--t-12); color: var(--ink-4); }
+  .nm-value { font-size: var(--t-18); line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; }
+  .nm-was { display: flex; align-items: center; gap: 3px; font-size: var(--t-12); color: var(--ink-3); white-space: nowrap; min-height: 16px; }
+  .nm-was .up { color: var(--good); display: inline-flex; } .nm-was .down { color: var(--attn); display: inline-flex; }
+  .nm-was svg { width: 12px; height: 12px; }
+</style>

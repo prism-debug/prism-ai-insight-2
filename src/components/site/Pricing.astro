@@ -1,0 +1,91 @@
+---
+// Presale plans and the sign-up that comes before payment. The three cards are one native radio group (arrow keys
+// move between them); each card is its radio's label, stretched over the whole card. The form saves the sign-up to
+// Netlify Forms ("presale"), then sends the browser to the chosen plan's Stripe Payment Link with the email
+// prefilled. A plan without a link only saves, and says a checkout link will follow (src/scripts/waitlist-presale.ts).
+import Icon from '../Icon.astro';
+import { PLANS, DEFAULT_PLAN, OVERAGE, priceLabel } from '../../data/presale.ts';
+
+const chosen = PLANS.find((p) => p.id === DEFAULT_PLAN)!;
+---
+<section class="wl-wrap wl-sec pl-sec" id="pricing" aria-labelledby="h-pricing">
+  <h2 id="h-pricing"><span class="l1">Pick your plan.</span> <span class="l2">Lock in presale pricing.</span></h2>
+
+  <fieldset class="pl-set">
+    <legend class="sr-only">Choose a plan</legend>
+    <div class="pl-grid">
+      {PLANS.map((p) => (
+        <div class:list={['pl', { 'is-popular': p.popular }]}>
+          <input class="pl-radio" type="radio" name="plan" id={`plan-${p.id}`} value={p.id} checked={p.id === DEFAULT_PLAN}
+            aria-describedby={`plan-${p.id}-promise`} data-name={p.name} data-price={priceLabel(p)} data-stripe-link={p.link} />
+          <div class="pl-head">
+            <label class="pl-hit" for={`plan-${p.id}`}><span class="pl-name">{p.name}</span><span class="sr-only">, {priceLabel(p)}{p.popular ? ', most popular' : ''}</span></label>
+            {p.popular && <span class="pl-badge" aria-hidden="true">Most popular</span>}
+            <span class="pl-tick" aria-hidden="true"><Icon name="check" size={14} sw={3} /></span>
+          </div>
+          <p class="pl-price" aria-hidden="true"><b class="tnum">${p.price}</b><span>/ mo</span></p>
+          <p class="pl-promise" id={`plan-${p.id}-promise`}>{p.promise}</p>
+          <ul class="pl-quotas" aria-label={`${p.name} allowances`}>
+            {p.quotas.map((q) => (
+              <li class:list={{ 'is-off': !q.included }}>
+                <Icon name={q.included ? 'check' : 'minus'} size={16} sw={2.5} />
+                <span class="pl-q-l">{q.label}</span>
+                <b class="pl-q-v tnum">{q.value}</b>
+              </li>
+            ))}
+          </ul>
+          <ul class="pl-perks" aria-label={`${p.name} includes`}>
+            {p.perks.map((perk) => <li class:list={{ 'is-all': perk.startsWith('Everything in') }}><Icon name="check" size={15} sw={2.5} />{perk}</li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </fieldset>
+  <p class="pl-over">{OVERAGE}</p>
+
+  <form class="pl-form" id="pl-form" name="presale" method="POST" action="/presale" data-netlify="true" netlify-honeypot="bot-field" novalidate data-presale>
+    <input type="hidden" name="form-name" value="presale" />
+    <input type="hidden" name="plan" value={chosen.id} data-plan-field />
+    <p hidden><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+    <div class="pl-form-body" data-form-body>
+      <div class="pl-form-h">
+        <h3>Reserve your seat</h3>
+        <p class="pl-summary"><span class="sr-only">Chosen plan: </span><output for="plan-essential plan-growth plan-pro" data-summary aria-live="polite">{chosen.name} · {priceLabel(chosen)}</output></p>
+      </div>
+      <div class="pl-fields">
+        <div class="pl-field">
+          <label for="pl-name">Your name</label>
+          <input id="pl-name" class="wl-input" type="text" name="name" required autocomplete="name" aria-describedby="pl-name-err" />
+          <p class="pl-err" id="pl-name-err"></p>
+        </div>
+        <div class="pl-field">
+          <label for="pl-salon">Salon name</label>
+          <input id="pl-salon" class="wl-input" type="text" name="salon" required autocomplete="organization" aria-describedby="pl-salon-err" />
+          <p class="pl-err" id="pl-salon-err"></p>
+        </div>
+        <div class="pl-field">
+          <label for="pl-email">Work email</label>
+          <input id="pl-email" class="wl-input" type="email" name="email" required autocomplete="email" placeholder="you@yoursalon.com" aria-describedby="pl-email-err" />
+          <p class="pl-err" id="pl-email-err"></p>
+        </div>
+        <div class="pl-field">
+          <label for="pl-phone">Phone <span>(optional)</span></label>
+          <input id="pl-phone" class="wl-input" type="tel" name="phone" autocomplete="tel" />
+        </div>
+      </div>
+      <div class="pl-submit">
+        <button class="wl-btn" type="submit"><span>Continue to secure checkout</span><Icon name="arrow-right" size={16} /></button>
+        <p class="pl-fine"><Icon name="lock" size={14} />You’ll finish on Stripe’s secure checkout.</p>
+      </div>
+      <p class="pl-status" role="status" aria-live="polite" data-status></p>
+    </div>
+    <div class="pl-done" data-done hidden>
+      <span class="pl-done-ic"><Icon name="check" size={22} sw={2.5} /></span>
+      <p tabindex="-1" data-done-msg></p>
+    </div>
+  </form>
+</section>
+
+<script>
+  import '../../scripts/waitlist-presale.ts';
+</script>

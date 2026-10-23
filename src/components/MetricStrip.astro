@@ -1,0 +1,22 @@
+---
+import Icon from './Icon.astro';
+export interface MetricItem { label: string; value: string; was?: string; dir?: 'up' | 'down' | 'flat'; tone?: 'good' | 'bad' | 'flat'; href?: string; info?: string; note?: string; sense?: string }
+interface Props { items: MetricItem[]; cols?: number }
+const { items, cols = items.length } = Astro.props;
+---
+<div class="strip" style={`--n:${cols}`}>
+  {items.map((m) => {
+    const Tag = m.href ? 'a' : 'div';
+    const cls = m.tone === 'good' ? 'up' : m.tone === 'bad' ? 'down' : 'flat';
+    return (
+      <Tag class="metric" href={m.href} title={m.info}>
+        <span class="metric-label">{m.label}{m.info && <Icon name="info" size={12} />}</span>
+        <span class="metric-value">{m.value}</span>
+        <span class="metric-was">
+          {m.dir && m.dir !== 'flat' && <span class={cls}><Icon name={m.dir === 'up' ? 'arrow-up-right' : 'arrow-down-right'} size={12} /></span>}
+          {m.was ? <span>was {m.was}{(m.sense ?? (m.tone === 'good' ? 'better' : m.tone === 'bad' ? 'worse' : '')) ? ` · ${m.sense ?? (m.tone === 'good' ? 'better' : 'worse')}` : ''}</span> : m.note ? <span>{m.note}</span> : <span>&nbsp;</span>}
+        </span>
+      </Tag>
+    );
+  })}
+</div>

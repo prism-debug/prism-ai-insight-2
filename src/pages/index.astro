@@ -1,0 +1,290 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import BarChart from '../components/BarChart.astro';
+import ListTools from '../components/ListTools.astro';
+import Numbers from '../components/home/Numbers.astro';
+import MetricStrip from '../components/MetricStrip.astro';
+import { CUR, PRV, HEALTH, HEALTH_PREV, notAnsweredLeads, bySource, dailySeries } from '../data/metrics.ts';
+import { VERDICT, VERDICT_SUB, FOCUS, UPDATED } from '../data/dash.ts';
+import { LEADS, APPOINTMENTS } from '../data/seed.ts';
+import { NOW, DAY, atDay, RANGE } from '../data/clock.ts';
+import { source, stylist, service } from '../data/salon.ts';
+import { money, moneyK, times, pct, pct0, dur, delta, clock, dateShort, weekday, ago, plural, first } from '../lib/format.ts';
+
+const d = (c: number, p: number, o: { higherIsBetter?: boolean; neutral?: boolean } = {}) => {
+  const x = delta(c, p, o);
+  const small = Math.abs(c - p) / Math.max(Math.abs(p), 1e-9) < 0.03;
+  const tone = o.neutral || small ? ('flat' as const) : x.tone;
+  const sense = o.neutral ? '' : small ? 'same' : tone === 'good' ? 'better' : 'worse';
+  return { dir: x.dir, tone, sense };
+};
+const strip1 = [
+  { label: 'Spent on ads', value: money(CUR.adSpend), was: money(PRV.adSpend), ...d(CUR.adSpend, PRV.adSpend, { neutral: true }), href: '/marketing', info: 'Everything you spent on Meta and Google ads in this period.' },
+  { label: 'Booked by your leads', value: money(CUR.bookedValue), was: money(PRV.bookedValue), ...d(CUR.bookedValue, PRV.bookedValue), href: '/marketing', info: 'Value of appointments booked by people who first contacted you in this period, including upcoming ones. Counts every source.' },
+  { label: 'Left after ad spend', value: money(CUR.keptAfterAds), was: money(PRV.keptAfterAds), ...d(CUR.keptAfterAds, PRV.keptAfterAds), info: 'Booked by Meta and Google leads minus ad spend. Not profit: it does not subtract wages, products or rent.' },
+  { label: 'Booked per $1 of ads', value: times(CUR.returnPerAd), was: times(PRV.returnPerAd), ...d(CUR.returnPerAd, PRV.returnPerAd), href: '/marketing', info: 'Booked value from Meta and Google leads divided by ad spend: what each $1 on ads brought in.' },
+];
+const strip2 = [
+  { label: 'New leads', value: String(CUR.leadsNew), was: String(PRV.leadsNew), ...d(CUR.leadsNew, PRV.leadsNew), href: '/leads', info: 'People who first contacted you in this period.' },
+  { label: 'Leads who booked', value: pct(CUR.bookingRate), was: pct(PRV.bookingRate), ...d(CUR.bookingRate, PRV.bookingRate), info: `${CUR.booked} of ${CUR.leadsNew} people who reached out booked an appointment.` },
+  { label: 'Joy’s first reply', value: dur(CUR.firstReplyJoy ?? 0), was: dur(PRV.firstReplyJoy ?? 0), ...d(CUR.firstReplyJoy ?? 0, PRV.firstReplyJoy ?? 0, { higherIsBetter: false }), href: '/joy', info: 'Median time from a lead’s first message to Joy’s reply.' },
+  { label: 'Team’s first reply', value: dur(CUR.firstReplyTeam ?? 0), was: dur(PRV.firstReplyTeam ?? 0), ...d(CUR.firstReplyTeam ?? 0, PRV.firstReplyTeam ?? 0, { higherIsBetter: false }), href: '/inbox', info: 'Median time from a lead’s first message to a person’s reply.' },
+];
+const formula = `Left after ad spend = ${money(CUR.adValue)} booked from Meta and Google leads minus ${money(CUR.adSpend)} spent. Booked per $1 of ads = ${money(CUR.adValue)} / ${money(CUR.adSpend)}. Booked by your leads counts every source.`;
+const moneyLine = `Spent ${money(CUR.adSpend)} · Booked ${money(CUR.bookedValue)} · ${times(CUR.returnPerAd)} per $1 of ads`;
+const verbOf: Record<string, string> = { reply: 'Open', winback: 'Win back', night: 'Turn on', requests: 'Review' };
+const stripAll = [...strip1.map((m) => ({ ...m, phoneHide: true })), ...strip2];
+const areaOf: Record<string, string> = { reply: 'Leads', winback: 'Retention', night: 'Joy', requests: 'Bookings' };
+const waitingTotal = CUR.notAnswered + CUR.needsPerson;
+const actionLabel: Record<string, (f: (typeof FOCUS)[number]) => string> = {
+  reply: () => `Open the ${waitingTotal} waiting leads`,
+  winback: (f) => `${f.cta} overdue clients`,
+  requests: (f) => `Review ${f.title.match(/\d+/)?.[0] ?? ''} booking requests`,
+};
+const focus = FOCUS.map((f) => ({ ...f, stakeLabel: f.stakeLabel.replace(/ (in play|at stake)$/, ' likely'), ...(f.id === 'reply' ? { title: `Reply to the ${waitingTotal} waiting leads`, href: '/leads' } : {}) }));
+const waiting = [...notAnsweredLeads().filter((l) => NOW - l.lastInboundAt < 3 * DAY), ...LEADS.filter((l) => l.status === 'needs_person')].sort((a, b) => b.lastInboundAt - a.lastInboundAt).slice(0, 7);
+const shownBy = (st: string) => waiting.filter((l) => l.status === st).length;
+const totalBy: Record<string, number> = { not_answered: CUR.notAnswered, needs_person: CUR.needsPerson };
+const hotIds = new Set([...waiting].sort((a, b) => a.lastInboundAt - b.lastInboundAt).filter((l) => NOW - l.lastInboundAt > 15 * 60000).slice(0, 3).map((l) => l.id));
+const sources = bySource().filter((s) => s.leads > 0).sort((a, b) => b.leads - a.leads);
+const series = dailySeries(30);
+const upcoming = APPOINTMENTS.filter((a) => a.start >= NOW - 30 * 60000 && a.start < atDay(4)).slice(0, 6);
+const todayCount = APPOINTMENTS.filter((a) => a.start >= atDay(0) && a.start < atDay(1)).length;
+const joyBooked = LEADS.filter((l) => l.status === 'booked' && l.firstReplyBy === 'joy' && l.firstTouchAt >= RANGE.start).length;
+const worst = [...HEALTH.parts].sort((a, b) => a.score * a.weight - b.score * b.weight)[0];
+const maxLeads = Math.max(...sources.map((s) => s.leads));
+const tIcon: Record<string, string> = { attn: 'not_answered', watch: 'at_risk', joy: 'joy_handling' };
+---
+<AppShell title="Home" active="home" description="The owner’s two-minute check: Dash’s verdict, what to do this week, and the numbers behind it.">
+  <div class="home">
+    <header class="verdict" data-tour="verdict">
+      <div class="verdict-copy">
+        <h1 class="t-verdict">{VERDICT}</h1>
+        <p class="t-body muted measure hide-m">{VERDICT_SUB}</p>
+        <p class="t-small muted m-range">{RANGE.label} vs the 30 before</p>
+        <p class="attrib t-meta hide-m"><Avatar kind="dash" size="sm" /><span>Dash · updated {UPDATED} · {RANGE.label} vs the 30 before</span></p>
+      </div>
+      <a class="btn btn-black" data-tour="next" href="/leads"><span>Reply to the {waitingTotal} waiting leads</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></a>
+    </header>
+
+    <p class="m-line tnum t-small muted">{moneyLine}</p>
+
+    <div class="grid">
+      <div class="col">
+        <section class="panel" aria-labelledby="h-do" data-tour="do">
+          <header class="panel-head"><h2 class="t-head" id="h-do">Do this week</h2><span class="t-meta head-note">Likely value, not booked revenue. Figures overlap.</span></header>
+          <ul class="do-list">
+            {focus.map((f) => (
+              <li class="grow do-row">
+                <span class="g-ic"><StatusIcon state={tIcon[f.tone]} size={16} /></span>
+                <a href={f.href} class="strong g-name" title={f.why}>{f.title}</a>
+                <span class="g-meta t-small muted hide-m">{areaOf[f.id]}</span>
+                <span class="g-val t-small muted tnum">{f.stakeLabel}</span>
+                <span class="g-chev only-m"><Icon name="chevron-right" size={16} /></span>
+                <a class="row-hit" href={f.href} aria-hidden="true" tabindex="-1"></a>
+                <a class="g-act t-small hide-m" href={f.href} title={(actionLabel[f.id] ?? (() => f.cta))(f)}><span>{verbOf[f.id] ?? 'Open'}</span><Icon name="arrow-right" size={13} /></a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section class="panel" aria-labelledby="h-need" data-tour="needs">
+          <header class="panel-head"><h2 class="t-head" id="h-need">Needs you now</h2><span class="t-small muted head-sub">Showing {shownBy('not_answered')} of {CUR.notAnswered} not answered · {shownBy('needs_person')} of {CUR.needsPerson} need a person</span><span class="head-r"><a class="t-small link-quiet" href="/leads">See all {waitingTotal}</a><ListTools panel={false} label="Needs you now" /></span></header>
+          <div class="list">
+            {[['not_answered', 'Not answered'], ['needs_person', 'Needs a person']].map(([st, label]) => {
+              const rows = waiting.filter((l) => l.status === st);
+              return rows.length ? (
+                <div class="group">
+                  <button class="group-head" type="button" aria-expanded="true"><Icon name="chevron-down" size={14} class="chev" /><StatusIcon state={st} /><span>{label}</span><span class="count">{totalBy[st]}</span><span class="showing t-small muted">Showing {rows.length} of {totalBy[st]}, most recent</span></button>
+                  <div class="group-body">
+                    {rows.map((l) => {
+                      const hot = hotIds.has(l.id);
+                      return (
+                        <a class="grow need-row" href={`/leads/${l.id}`}>
+                          <span class="g-ic"><StatusIcon state={st} size={16} /></span>
+                          <span class="g-name"><span class="strong">{l.name}</span> <span class="sub">· {service(l.serviceId).name}</span></span>
+                          <span class="g-meta t-small muted"><Icon name={l.channel === 'phone' ? 'phone' : l.channel === 'instagram' ? 'camera' : l.channel === 'facebook' ? 'message-circle' : l.channel === 'form' ? 'file-text' : 'message-square'} size={14} /><span class="truncate">{source(l.sourceId).name}</span></span>
+                          <span class={`g-val t-small tnum ${hot ? 'late' : 'muted'}`}>waiting {dur(NOW - l.lastInboundAt)}</span>
+                          <span class="g-act t-small muted hide-m"><span class="truncate">{l.status === 'needs_person' ? l.handoffReason : l.preview}</span></span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null;
+            })}
+          </div>
+        </section>
+
+        <div class="m-strip">
+          <MetricStrip items={strip1} cols={2} />
+          <p class="t-small muted basis">{formula}</p>
+        </div>
+
+        <section class="panel" aria-labelledby="h-chart">
+          <header class="panel-head"><h2 class="t-head" id="h-chart">New leads by day</h2><span class="t-meta tnum">{CUR.leadsNew} in 30 days · {(CUR.leadsNew / 30).toFixed(1)} a day</span></header>
+          <div class="panel-body">
+            <BarChart unit="New leads" data={series.map((s) => ({ label: dateShort(s.t), value: s.leads, tip: `${dateShort(s.t)}|New leads~${s.leads}|30-day average~${(CUR.leadsNew / 30).toFixed(1)} a day|${s.leads > CUR.leadsNew / 30 + 1 ? 'Busier than usual' : s.leads < CUR.leadsNew / 30 - 1 ? 'Quieter than usual' : 'About average'}` }))} height={150} every={6} summary={`New leads per day over the last 30 days, ${CUR.leadsNew} in total`} />
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-src">
+          <header class="panel-head"><h2 class="t-head" id="h-src">Where leads come from</h2><span class="head-r"><a class="t-small link" href="/marketing">Open Marketing</a><ListTools panel={false} label="Where leads come from" /></span></header>
+          <div class="list">
+            <div class="row head src-row"><span class="cell">Source</span><span class="cell hide-m">Share</span><span class="cell right">Leads</span><span class="cell right">Booked</span><span class="cell right">Per $1</span></div>
+            {sources.map((s) => (
+              <div class="row src-row"><span class="cell name">{s.source.name}</span><span class="cell hide-m"><span class="meter wide" tabindex="0" data-tip={`${s.source.name}|Leads~${s.leads}|Booked~${s.booked}${s.back ? `|Back per $1 of ad spend~${times(s.back)}` : ''}`}><i style={`width:${(s.leads / maxLeads) * 100}%`}></i></span></span><span class="cell right tnum">{s.leads}</span><span class="cell right tnum">{s.booked}</span><span class={`cell right tnum ${s.back !== null && s.back < 1 ? 'late strong' : ''}`}>{s.back ? times(s.back) : <span class="muted">Free</span>}</span></div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <aside class="col rail-col" aria-label="Numbers, health, Joy and today">
+        <section class="panel numbers-sec" aria-labelledby="h-nums" data-tour="numbers">
+          <header class="panel-head"><h2 class="t-head" id="h-nums"><span class="hide-m">The numbers</span><span class="only-m">Lead speed</span></h2><span class="t-meta hide-m">30 days · arrow vs the 30 before</span></header>
+          <div class="panel-body nums-body"><Numbers items={stripAll} /><p class="t-small muted basis">{formula}</p></div>
+          <header class="panel-head sub-head"><h2 class="t-head" id="h-joy">Joy, last 30 days</h2><a class="t-small link-quiet" href="/joy">Open Joy</a></header>
+          <dl class="kv">
+            <div><dt>Leads answered</dt><dd class="tnum">{CUR.joyCovered} of {CUR.leadsNew}</dd></div>
+            <div><dt>Median first reply</dt><dd class="tnum">{dur(CUR.firstReplyJoy ?? 0)}</dd></div>
+            <div><dt>Booked by Joy</dt><dd class="tnum">{joyBooked}</dd></div>
+          </dl>
+        </section>
+
+        <section class="panel" aria-labelledby="h-health" data-tour="health">
+          <header class="panel-head"><h2 class="t-head" id="h-health">Salon health</h2><span class="t-meta tnum">was {HEALTH_PREV.total}</span></header>
+          <div class="panel-body health">
+            <p class="t-small muted scale">Each part scores 0 to 100; lower needs work.</p>
+            {HEALTH.parts.map((p) => (
+              <div class="hrow"><span class="t-small">{p.label === 'Ad payback' ? 'Ad return' : p.label}</span><span class="meter" tabindex="0" data-tip={`${p.label === 'Ad payback' ? 'Ad return' : p.label}|Score~${p.score} out of 100|${p.score < 40 ? 'Needs work' : p.score < 70 ? 'Fair' : 'Healthy'}${p.why ? `|${p.why}` : ''}`} role="img" aria-label={`${p.label} ${p.score} out of 100`}><i style={`width:${Math.max(4, p.score)}%;background:${p.score < 40 ? 'var(--d-orange)' : 'var(--d-teal)'}`}></i></span><span class="t-small strong tnum">{p.score}</span></div>
+            ))}
+            <p class="t-small muted"><strong class="tnum">{HEALTH.total} out of 100</strong> · lowest: {worst.label.toLowerCase()}. {worst.why}.</p>
+            <a class="t-small link-quiet fix" href="/leads">Fix {worst.label.toLowerCase()}<Icon name="arrow-right" size={13} /></a>
+          </div>
+        </section>
+
+        <section class="panel today-sec" aria-labelledby="h-today">
+          <header class="panel-head"><h2 class="t-head" id="h-today">Today</h2><a class="t-small link" href="/bookings">Open Bookings</a></header>
+          <p class="t-small muted panel-note">{plural(todayCount, 'appointment')} today · 7 booking requests waiting</p>
+          <ul class="today">
+            {upcoming.map((a) => (
+              <li class="today-row"><span class="tnum t-small muted">{a.start < atDay(1) ? clock(a.start) : `${weekday(a.start)} ${clock(a.start)}`}</span><span class="truncate"><span class="strong">{first(a.name)}</span> <span class="muted t-small">{service(a.serviceId).name}</span></span><Avatar name={stylist(a.stylistId).name} size="sm" /></li>
+            ))}
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+</AppShell>
+
+<style is:global>
+  @media (max-width: 900px) { .content { padding-bottom: calc(88px + env(safe-area-inset-bottom)); } }
+</style>
+<style>
+  .home { display: grid; gap: var(--s-5); }
+  .verdict { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-6); flex-wrap: wrap; }
+  .verdict-copy { display: grid; gap: var(--s-1); max-width: 900px; }
+  .verdict-copy .t-verdict { font-size: var(--t-22); }
+  .verdict .btn-black { height: 36px; padding: 0 4px 0 14px; gap: 8px; }
+  .verdict .btn-black .arrow { width: 26px; height: 26px; }
+  .attrib { display: flex; align-items: center; gap: var(--s-2); }
+  .m-strip, .m-line, .m-range { display: none; }
+  .group-head .showing { margin-left: auto; font-weight: 400; }
+  .grow { padding-right: 12px !important; }
+  .do-row .g-act { justify-content: space-between; }
+  @media (min-width: 901px) { .do-list .do-row { grid-template-columns: 18px minmax(0, 1fr) 130px 90px 84px; } }
+  @media (min-width: 901px) and (max-width: 1180px) { .do-list .do-row { grid-template-columns: 18px minmax(0, 1fr) 90px 84px; } }
+  .basis { padding-top: var(--s-2); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) clamp(340px, 24vw, 520px); gap: 0; align-items: start; }
+  .col { display: grid; gap: var(--s-6); min-width: 0; padding-right: var(--s-6); }
+  .rail-col { padding-right: 0; padding-left: var(--s-6); border-left: 1px solid var(--line); gap: var(--s-5); }
+  .panel { min-width: 0; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 0 0 8px; border-bottom: 1px solid var(--line); min-height: 0; }
+  .panel-head.sub-head { margin-top: var(--s-5); }
+  .head-sub { margin-right: auto; }
+  .head-r { display: inline-flex; align-items: center; gap: var(--s-3); white-space: nowrap; flex: none; }
+  .panel-head h2 { white-space: nowrap; }
+  .panel-body { padding: var(--s-3) 0 0; }
+  .nums-body { padding-top: var(--s-3); }
+  .panel-note { padding: var(--s-2) 0 0; }
+  .link { color: var(--violet-deep); font-weight: 600; }
+  .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .fix { display: inline-flex; align-items: center; gap: 5px; width: fit-content; }
+  .do-list { display: grid; }
+  .grow { display: grid; grid-template-columns: 18px minmax(0, 1fr) 130px 90px 190px; gap: var(--s-3); align-items: center; height: 40px; border-bottom: 1px solid var(--line); font-size: var(--t-13); padding: 0; }
+  a.grow:hover { background: var(--hover); }
+  .g-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--t-13); }
+  a.g-name:hover { color: var(--violet-deep); }
+  .g-ic { display: grid; place-items: center; }
+  .g-meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .g-meta svg { flex: none; }
+  .g-val { text-align: right; white-space: nowrap; }
+  .g-act { display: inline-flex; align-items: center; justify-content: flex-start; gap: 5px; min-width: 0; text-align: left; white-space: nowrap; }
+  .link-quiet { color: var(--ink-2); font-size: var(--t-13); }
+  .link-quiet:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .row-hit { display: none; }
+  .g-chev { display: none; color: var(--ink-3); }
+  .head-note { text-align: right; }
+  .do-row .g-act { color: var(--ink-2); font-size: var(--t-13); }
+  .do-row .g-act:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .g-act svg { flex: none; }
+  .need-row .g-act { display: block; overflow: hidden; } .need-row .g-act .truncate { display: block; }
+  .overlap { padding-top: var(--s-2); }
+  .group-head { min-height: 32px; }
+  .wait { white-space: nowrap; }
+  .late { color: var(--attn); }
+  .src-row { --cols: minmax(120px, 1fr) minmax(140px, 1.2fr) 70px 70px 90px; }
+  .meter { display: block; height: 6px; border-radius: 6px; background: var(--d-track); overflow: hidden; width: 100%; }
+  .meter i { display: block; height: 100%; border-radius: 6px; background: var(--d-teal); }
+  .health { display: grid; gap: var(--s-2); }
+  .hrow { display: grid; grid-template-columns: 112px minmax(0, 1fr) 24px; align-items: center; gap: var(--s-3); }
+  .kv { display: grid; }
+  .kv > div { display: flex; justify-content: space-between; gap: var(--s-3); padding: 7px 0; border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .kv > div:last-child { border-bottom: 0; } .kv dt { color: var(--ink-3); } .kv dd { font-weight: 600; text-align: right; }
+  .today { display: grid; }
+  .today-row { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: var(--s-2); align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .today-row:last-child { border-bottom: 0; }
+  .panel .row { padding-left: 0; padding-right: 0; }
+  .panel .group-head { padding-left: 0; }
+  .panel .row.head { padding: 0 0; }
+  @media (min-width: 901px) and (max-width: 1180px) { .grow { grid-template-columns: 18px minmax(0, 1fr) 90px 200px; } .grow > :nth-child(3) { display: none; } }
+  @media (max-width: 1100px) { .grid { grid-template-columns: minmax(0, 1fr); gap: var(--s-6); } .col { padding-right: 0; } .rail-col { padding-left: 0; border-left: 0; display: flex; flex-direction: column; } .numbers-sec { order: -2; } .today-sec { order: -1; } .grow { grid-template-columns: 18px minmax(0, 1fr) 110px 90px 160px; } }
+  @media (max-width: 900px) {
+    .home { gap: var(--s-3); }
+    .grid { gap: var(--s-4); } .col { gap: var(--s-4); }
+    .basis { padding-top: var(--s-1); font-size: var(--t-12); line-height: 1.35; }
+    .overlap { padding-top: var(--s-1); }
+    .head-sub { padding-top: 0 !important; }
+    .verdict { gap: var(--s-3); }
+    .verdict-copy .t-verdict { font-size: 18px; line-height: 1.25; }
+    .verdict .btn-black { width: 100%; justify-content: space-between; height: 44px; padding: 0 8px 0 18px; }
+    .verdict .btn-black .arrow { width: 30px; height: 30px; }
+    .m-strip { display: block; }
+    .m-range { display: block; }
+    .m-line { display: block; line-height: 1.4; }
+    .grow { padding-right: 0 !important; }
+    .group-head .showing { font-size: var(--t-12); }
+    .m-strip :global(.strip) { border-radius: var(--r-md); }
+    .m-strip :global(.metric) { padding: 10px var(--s-3); }
+    .m-strip :global(.metric:nth-child(odd)) { padding-left: 0; }
+    .m-strip :global(.metric-value) { font-size: var(--t-18); }
+    .m-strip :global(.metric-label svg) { display: none; }
+    .rail-col .numbers-sec, .rail-col .today-sec { order: 0; }
+    .grow { grid-template-columns: 18px minmax(0, 1fr) auto; min-height: 44px; height: auto; gap: var(--s-3); }
+    .do-row { height: auto; min-height: 44px; grid-template-columns: 18px minmax(0, 1fr) auto 16px; padding: 8px 0; cursor: pointer; }
+    .do-row .g-name { white-space: normal; overflow: visible; font-size: 15px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .row-hit { display: block; position: absolute; inset: 0; z-index: 1; }
+    .do-row { position: relative; }
+    .group-head { margin: 0 calc(-1 * var(--s-4)); width: calc(100% + 2 * var(--s-4)); padding: 0 var(--s-4) !important; border-radius: 0; }
+    .head-note { flex-basis: 100%; order: 3; text-align: left; }
+    .need-row { grid-template-columns: 18px minmax(0, 1fr) auto; grid-template-areas: "ic name val" ". meta meta"; row-gap: 0; padding: 6px 0; align-content: center; }
+    .need-row .g-ic { grid-area: ic; align-self: start; padding-top: 3px; } .need-row .g-name { grid-area: name; } .need-row .g-val { grid-area: val; } .need-row .g-meta { grid-area: meta; }
+    .panel-head { flex-wrap: wrap; }
+    .head-sub { order: 3; flex-basis: 100%; margin: 0; padding-top: 2px; }
+    .panel-head .head-r { margin-left: auto; }
+    .src-row { --cols: minmax(0, 1fr) 48px 56px 64px; }
+  }
+</style>

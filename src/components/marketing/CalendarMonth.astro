@@ -1,0 +1,56 @@
+---
+import { EVENTS, type Ev } from '../../data/marketing.ts';
+interface Props { y: number; m: number; name: string; hidden?: boolean }
+const { y, m, name, hidden = false } = Astro.props;
+const iso = (d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+const lead = new Date(Date.UTC(y, m, 1)).getUTCDay();
+const cells = [...Array(lead).fill(0), ...Array.from({ length: dim }, (_, i) => i + 1)];
+while (cells.length % 7) cells.push(0);
+const span = (e: Ev) => (Date.parse(e.to) - Date.parse(e.from)) / 86400000;
+const overlaps = (e: Ev) => e.from <= iso(dim) && e.to >= iso(1);
+const running = EVENTS.filter((e) => overlaps(e) && span(e) > 9);
+const short = EVENTS.filter((e) => overlaps(e) && span(e) <= 9);
+const on = (d: number) => short.filter((e) => e.from <= iso(d) && e.to >= iso(d));
+const col: Record<string, string> = { campaign: 'var(--d-teal)', promo: 'var(--d-orange)', bridal: 'var(--d-deep)' };
+const kindName: Record<string, string> = { campaign: 'Campaign', promo: 'Promo', bridal: 'Bridal' };
+const fmtD = (s: string) => new Date(s + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const todayIso = '2026-10-10';
+---
+<div class="cal" data-cal={`${y}-${m}`} hidden={hidden}>
+  {running.length > 0 && <div class="list cal-run">
+    <div class="row head run"><span class="cell">Running this month</span><span class="cell hide-m">Dates</span><span class="cell hide-m">Detail</span></div>
+    {running.map((e) => <div class="row run"><span class="cell"><i class="dot" style={`background:${col[e.kind]}`}></i><span class="name truncate">{e.label}</span><span class="sub only-m">{fmtD(e.from)} to {fmtD(e.to)}</span></span><span class="cell muted hide-m tnum">{fmtD(e.from)} to {fmtD(e.to)}</span><span class="cell muted hide-m truncate">{kindName[e.kind]}{e.note ? ` · ${e.note}` : ''}</span></div>)}
+  </div>}
+  <div class="cal-grid" role="grid" aria-label={name}>
+    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div class="cal-dow" role="columnheader">{d}</div>)}
+    {cells.map((d) => (
+      <div class={`cal-day ${d === 0 ? 'empty-day' : ''} ${iso(d) === todayIso ? 'today' : ''}`} role="gridcell">
+        {d > 0 && <span class="cal-n tnum">{d}</span>}
+        {d > 0 && on(d).map((e) => <span class="cal-ev" style={`--c:${col[e.kind]}`} title={`${kindName[e.kind]}: ${e.label}${e.note ? ' · ' + e.note : ''}`}>{e.label}</span>)}
+      </div>
+    ))}
+  </div>
+  {short.length > 0 && <div class="list">
+    <div class="row head run"><span class="cell">Promos and markers</span><span class="cell hide-m">Dates</span><span class="cell hide-m">Detail</span></div>
+    {short.map((e) => <div class="row run"><span class="cell"><i class="dot" style={`background:${col[e.kind]}`}></i><span class="name truncate">{e.label}</span><span class="sub only-m">{fmtD(e.from)}{e.to !== e.from ? ` to ${fmtD(e.to)}` : ''}</span></span><span class="cell muted hide-m tnum">{fmtD(e.from)}{e.to !== e.from ? ` to ${fmtD(e.to)}` : ''}</span><span class="cell muted hide-m truncate">{kindName[e.kind]}{e.note ? ` · ${e.note}` : ''}</span></div>)}
+  </div>}
+</div>
+<style>
+  .run { --cols: minmax(180px, 1.3fr) 150px minmax(0, 1.4fr); }
+  .cal { display: grid; gap: var(--s-5); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+  .cal-dow { padding: 6px 8px; font-size: var(--t-12); font-weight: 600; color: var(--ink-3); background: var(--sunken); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .cal-day { min-height: 84px; padding: 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .cal-day.empty-day { background: var(--sunken); }
+  .cal-day.today { background: var(--violet-wash); }
+  .cal-n { font-size: var(--t-12); color: var(--ink-3); font-weight: 600; }
+  .today .cal-n { color: var(--violet-deep); }
+  .cal-ev { display: block; font-size: var(--t-11); font-weight: 600; line-height: 1.25; padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--c) 16%, white); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 900px) {
+    .run { --cols: minmax(0, 1fr); }
+    .cal-day { min-height: 56px; padding: 3px; }
+    .cal-ev { font-size: 0; padding: 0; height: 6px; border-radius: 3px; background: var(--c); }
+    .cal-dow { padding: 6px 2px; text-align: center; font-size: var(--t-11); }
+  }
+</style>

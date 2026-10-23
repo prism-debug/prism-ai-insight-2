@@ -1,0 +1,29 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import StatusIcon from '../StatusIcon.astro';
+import { LISTS, type CRow } from '../../data/clients.ts';
+import { money, dateShort, dayShort, first } from '../../lib/format.ts';
+import { NOW, DAY } from '../../data/clock.ts';
+interface Props { r: CRow }
+const { r } = Astro.props;
+const lists = LISTS.filter((l) => l.test(r)).map((l) => l.key).join(' ');
+const lastLabel = r.last ? (NOW - r.last > 250 * DAY ? `${dateShort(r.last)}, ${new Date(r.last).getUTCFullYear()}` : dateShort(r.last)) : 'Not yet';
+const lcLabel = ({ active: 'Active', at_risk: 'At risk', lapsed: 'Lapsed', prospect: 'New, first visit booked' } as Record<string, string>)[r.lifecycle];
+---
+<div class="row crow" data-row data-id={r.id} data-name={r.name.toLowerCase()} data-lifecycle={r.lifecycle} data-stage={r.stage} data-last={r.last} data-next={r.next ?? 0} data-spend={r.spend} data-avg={r.avg} data-stylist={r.stylistId} data-svc={r.svcId} data-src={r.srcId} data-consent={r.consent ? '1' : '0'} data-promo={r.promo ? '1' : '0'} data-lists={lists} data-first={first(r.name)} data-href={`/clients/${r.id}`}>
+  <span class="cell"><input type="checkbox" class="check" data-select aria-label={`Select ${r.name}`} /></span>
+  <span class="cell hide-m" title={lcLabel}><StatusIcon state={r.lifecycle} size={14} label={lcLabel} /></span>
+  <span class="cell cname">
+    <span class="only-m lc-m" title={lcLabel}><StatusIcon state={r.lifecycle} size={14} label={lcLabel} /></span>
+    <span class="cname-text"><a class="name truncate" href={`/clients/${r.id}`}>{r.name}</a><span class="sub only-m truncate">{r.stage} · {r.last ? `last ${lastLabel}` : 'first visit booked'}{r.next ? ` · next ${dateShort(r.next)}` : ''}</span></span>
+    <span class="tags" data-tags></span>
+  </span>
+  <span class="cell muted hide-m">{r.stage}</span>
+  <span class="cell muted tnum hide-m">{lastLabel}</span>
+  <span class="cell tnum hide-m">{r.next ? dayShort(r.next) : <span class="muted">None booked</span>}</span>
+  <span class="cell right tnum muted hide-m">{r.avg ? money(r.avg) : '—'}</span>
+  <span class="cell right tnum strong life"><span class={`consent-ic m ${r.consent ? 'ok' : 'off'}`} role="img" title={r.consent ? (r.promo ? 'Agreed to texts, including promotions' : 'Agreed to appointment texts only') : 'No text consent. Call or email instead.'} aria-label={r.consent ? 'Agreed to texts' : 'No text consent'}><Icon name={r.consent ? 'circle-check' : 'circle-x'} size={14} /></span><span>{r.spend ? money(r.spend) : '—'}</span></span>
+  <span class="cell hide-m truncate"><Avatar name={r.stylist} size="sm" /><span class="truncate">{r.stylist.split(' ')[0]}</span></span>
+  <span class="cell hide-m consent-c" title={r.consent ? (r.promo ? 'Agreed to texts, including promotions' : 'Agreed to appointment texts only') : 'No text consent. Call or email instead.'}><span class={`consent-ic ${r.consent ? 'ok' : 'off'}`} role="img" aria-label={r.consent ? (r.promo ? 'Agreed to texts, including promotions' : 'Agreed to appointment texts only') : 'No text consent'}><Icon name={r.consent ? 'circle-check' : 'circle-x'} size={15} /></span></span>
+</div>

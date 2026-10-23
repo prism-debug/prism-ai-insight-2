@@ -1,0 +1,40 @@
+---
+import Icon from '../../Icon.astro';
+import Fill from '../Fill.astro';
+import { SALON } from '../../../data/salon.ts';
+import { VOICE_SLIDERS, WORDS_USE, WORDS_AVOID } from '../../../data/onboarding.ts';
+---
+<Fill title="How Joy sounds" sub="Slide to match how your front desk talks to guests." need={['brand']}>
+  <div class="ob-fields c2">
+    {VOICE_SLIDERS.map((s) => (
+      <div class="field"><span>{s.label}</span>
+        <div class="ob-scale" role="radiogroup" aria-label={s.label} data-scale>
+          <span class="t-small muted">{s.lo}</span>
+          <span class="ob-scale-steps">{Array.from({ length: 6 }, (_, i) => <button type="button" role="radio" aria-checked={String(i + 1 === s.v)} data-on={String(i < s.v)} aria-label={`${s.label} ${i + 1} of 6`}></button>)}</span>
+          <span class="t-small muted">{s.hi}</span>
+        </div>
+      </div>
+    ))}
+  </div>
+</Fill>
+
+<Fill title="Words" need={['brand', 'website']}>
+  <div class="ob-fields c2">
+    <div class="field"><span>Words to use</span><div class="ob-chips" role="group" aria-label="Words to use">{WORDS_USE.map((w) => <button type="button" class="chip" aria-pressed="true">{w}</button>)}</div></div>
+    <div class="field"><span>Words to avoid</span><div class="ob-chips" role="group" aria-label="Words to avoid">{WORDS_AVOID.map((w) => <button type="button" class="chip" aria-pressed={String(w.on)}>{w.label}</button>)}</div></div>
+  </div>
+</Fill>
+
+<Fill title="Greeting and sign-off" need={['website']}>
+  <div class="ob-fields c2">
+    <label class="field">How should Joy greet a new guest?<span class="hint">Write it the way you would say it.</span>
+      <textarea class="textarea" rows="3">Hi, thanks for reaching out to {SALON.name}! This is Joy. Looking to book, or can I help with something else?</textarea>
+      <span class="ob-field-foot"><span class="hint">Visible to Joy</span><button type="button" class="btn btn-sm btn-dash" data-improve><Icon name="sparkles" size={13} />Improve with AI</button></span>
+    </label>
+    <label class="field">Sign-off phrase<span class="hint">Suggested from your website and Instagram captions.</span>
+      <textarea class="textarea" rows="3">See you soon, the M&amp;F team</textarea>
+      <span class="ob-field-foot"><span class="hint">Visible to Joy</span><button type="button" class="btn btn-sm btn-dash" data-improve><Icon name="sparkles" size={13} />Improve with AI</button></span>
+    </label>
+  </div>
+  <p class="ob-inline watch" data-need="brand,website" data-ready="false"><Icon name="triangle-alert" size={13} />Needs review: your brand guide uses a different sign-off. Confirm which one Joy should use.</p>
+</Fill>

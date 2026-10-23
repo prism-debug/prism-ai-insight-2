@@ -1,0 +1,156 @@
+---
+// The waitlist's product film, live: a Three.js scene (the app on a tilting window, the client's gradient shapes in
+// 3D around it) under an HTML layer of cards and captions, all driven by one 24-second loop in waitlist-film.ts.
+// Every figure comes from the demo salon's metrics module, so the film and the page can never disagree.
+import Icon from '../Icon.astro';
+import { CUR, bySource } from '../../data/metrics.ts';
+import { MONTH } from '../../data/joy.ts';
+import { ANSWERS } from '../../data/dash.ts';
+import { WB_OK, WB_OK_VALUE } from '../../data/retention.ts';
+import { SALON } from '../../data/salon.ts';
+import { money, times, dur } from '../../lib/format.ts';
+
+const src = bySource();
+const meta = src.find((s) => s.source.id === 'meta')!;
+const google = src.find((s) => s.source.id === 'google')!;
+const maxBack = Math.max(meta.back ?? 0, google.back ?? 0);
+const ask = ANSWERS[0];
+const replySec = Math.round(MONTH.median / 1000);
+const caps = [
+  `Every lead answered in under a minute. Even at 9:47 pm.`,
+  `Ad spend, joined to the bookings it actually made.`,
+  `See who’s drifting away. Win them back in one tap.`,
+  `Ask in plain English. Every answer ends in a next step.`,
+];
+---
+<figure class="fx" id="fx" data-caps={JSON.stringify(caps)}>
+  <img class="fx-poster" src="/media/waitlist-feature-poster.jpg" alt="" width="1600" height="1000" />
+  <canvas class="fx-gl" id="fx-gl" aria-hidden="true"></canvas>
+  <div class="fx-stage" id="fx-stage" aria-hidden="true">
+    <!-- 1. Joy answers a lead -->
+    <section class="fx-scene" data-scene="0">
+      <div class="fx-card" data-k="note" style="left:930px;top:30px;width:520px;padding:16px 20px;border-radius:18px">
+        <div class="fx-row"><div class="fx-av" style="background:#E1306C;width:38px;height:38px"><Icon name="camera" size={20} /></div>
+          <div style="flex:1"><div style="font-weight:700;font-size:19px">New lead · Instagram</div><div class="fx-muted" style="font-size:17px">Maya Chen · 9:47 pm · salon closed</div></div></div>
+      </div>
+      <div class="fx-card" data-k="chat" style="left:960px;top:150px;width:500px;padding:22px 22px 18px">
+        <div class="fx-row" style="padding-bottom:16px;border-bottom:1px solid var(--line)">
+          <div class="fx-av" style="background:#EDE7F6;color:#5b3c99">MC</div>
+          <div style="flex:1"><div style="font-weight:700;font-size:21px">Maya Chen</div><div class="fx-muted" style="font-size:16px">Instagram DM · Balayage reel</div></div>
+          <div class="fx-chip" style="background:var(--joy-wash);color:var(--joy);font-size:17px;padding:8px 14px"><img src="/brand/joy-mark.svg" alt="" width="24" height="24" /><span>Joy · <span data-k="sec" data-to={replySec}>0 s</span></span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding-top:18px">
+          <div class="fx-bub fx-in" data-k="b1">Hi! Do you have balayage openings this week?</div>
+          <div class="fx-dots" data-k="b2"><i></i><i></i><i></i></div>
+          <div class="fx-bub fx-joy" data-k="b3">Hi Maya, it’s Joy from {SALON.name}. Elena has Thu 4:30 pm or Sat 11:00 am. Balayage starts at $240. Want one?</div>
+          <div class="fx-bub fx-in" data-k="b4">Saturday works!</div>
+          <div class="fx-chip" data-k="b5" style="background:var(--mint);color:var(--teal8);align-self:flex-start;margin-top:6px"><Icon name="calendar-check" size={22} />Booked by Joy · Sat 11:00 am · $240</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Marketing ties to booked revenue -->
+    <section class="fx-scene" data-scene="1">
+      <div class="fx-card" data-k="card" style="left:930px;top:250px;width:560px;padding:30px 32px">
+        <div class="fx-muted" style="font-size:20px;font-weight:600">Booked for every $1 on ads</div>
+        <div class="fx-big" data-k="num" data-to={CUR.returnPerAd} style="margin:10px 0 26px">{times(CUR.returnPerAd)}</div>
+        <div style="display:grid;grid-template-columns:120px 1fr 70px;gap:14px 16px;align-items:center;font-size:19px">
+          <span style="font-weight:650">Meta ads</span><div class="fx-bar" data-k="b1" style={`background:var(--teal);width:${Math.round(((meta.back ?? 0) / maxBack) * 100)}%`}></div><span style="font-weight:700;text-align:right">{times(meta.back ?? 0)}</span>
+          <span style="font-weight:650">Google Ads</span><div class="fx-bar" data-k="b2" style={`background:var(--tan);width:${Math.round(((google.back ?? 0) / maxBack) * 100)}%`}></div><span style="font-weight:700;text-align:right">{times(google.back ?? 0)}</span>
+        </div>
+        <div class="fx-muted" style="font-size:17px;margin-top:20px">{money(CUR.adSpend)} spent · {money(CUR.adValue)} booked from those leads</div>
+      </div>
+    </section>
+
+    <!-- 3. Win-back -->
+    <section class="fx-scene" data-scene="2">
+      <div class="fx-card" data-k="card" style="left:880px;top:300px;width:600px;padding:30px 32px">
+        <div class="fx-muted" style="font-size:20px;font-weight:600">Next visits waiting with overdue clients</div>
+        <div class="fx-big" data-k="num" data-to={WB_OK_VALUE} style="margin:10px 0 8px">{money(WB_OK_VALUE)}</div>
+        <div class="fx-muted" style="font-size:19px;margin-bottom:24px">{WB_OK.length} clients who said yes to texts</div>
+        <div class="fx-btn" data-k="btn" style="background:var(--tan);color:var(--ink)"><span>Win back {WB_OK.length} clients</span><span class="fx-btn-arrow"><Icon name="arrow-right" size={18} /></span></div>
+        <div class="fx-chip" data-k="done" style="position:absolute;left:32px;bottom:30px;background:var(--mint);color:var(--teal8);font-size:21px;padding:16px 22px"><Icon name="check" size={22} />Joy is texting {WB_OK.length} clients</div>
+      </div>
+      <svg class="fx-cursor" data-k="cursor" viewBox="0 0 24 24"><path d="M4.04 4.04 10.9 21.1l2.53-7.66 7.66-2.53z" fill="#fff" stroke="#062A2D" stroke-width="1.6" stroke-linejoin="round" /></svg>
+    </section>
+
+    <!-- 4. Ask Dash -->
+    <section class="fx-scene" data-scene="3">
+      <div class="fx-card" data-k="card" style="left:860px;top:120px;width:620px;padding:26px 28px">
+        <div class="fx-row" style="padding-bottom:18px;border-bottom:1px solid var(--line)">
+          <img src="/brand/dash-mark.svg" alt="" width="52" height="52" style="flex:none" />
+          <div><div style="font-weight:700;font-size:24px">Ask Dash</div><div class="fx-muted" style="font-size:17px">Answers from your leads, clients, ads and bookings</div></div>
+        </div>
+        <div style="margin-top:22px;display:flex;flex-direction:column;gap:16px">
+          <div class="fx-q"><span data-k="q" data-text={ask.q}></span><span class="fx-caret" data-k="caret"></span></div>
+          <div class="fx-a" data-k="a">
+            <div data-k="at" data-text={ask.text}></div>
+            <div class="fx-muted" data-k="src" style="font-size:16px;margin-top:12px">From: {ask.cites.join(' · ')}</div>
+            {ask.cta && <div class="fx-btn" data-k="cta" style="background:var(--teal8);color:#fff;font-size:19px;padding:12px 18px;margin-top:14px">{ask.cta.label}</div>}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {caps.map((c, i) => <div class="fx-cap" data-cap={i}><b>{c}</b></div>)}
+  </div>
+  <button class="fx-toggle" type="button" id="fx-toggle" aria-label="Pause the film"><span class="i-pause"><Icon name="pause" size={16} /></span><span class="i-play"><Icon name="play" size={16} /></span></button>
+  <figcaption class="sr-only">A looping film of PRISM: Joy answers an Instagram lead at 9:47 pm and books a balayage; Marketing shows each dollar on ads brought back {times(CUR.returnPerAd)}; Retention finds {money(WB_OK_VALUE)} with {WB_OK.length} overdue clients; Ask Dash answers “{ask.q}”. Median first reply {dur(MONTH.median)}.</figcaption>
+</figure>
+<p class="fx-cap-m" id="fx-cap-m" aria-hidden="true">{caps[0]}</p>
+
+<script>
+  import '../../scripts/waitlist-film.ts';
+</script>
+
+<style>
+  .fx {
+    --teal8: #0B7E79; --tan: #FF9A4A; --muted: #566A6C;
+    position: relative; margin: 0; border-radius: 28px; overflow: hidden; aspect-ratio: 16 / 10; isolation: isolate;
+    background:
+      radial-gradient(60% 60% at 88% 8%, rgb(95 211 199 / .28), transparent 70%),
+      radial-gradient(50% 55% at 6% 96%, rgb(255 154 74 / .2), transparent 70%), var(--canvas);
+    box-shadow: 0 1px 2px rgb(6 42 45 / .08), 0 40px 80px -40px rgb(6 42 45 / .45);
+  }
+  .fx-poster, .fx-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .fx-poster { object-fit: cover; transition: opacity .6s var(--ease); }
+  .fx.is-live .fx-poster { opacity: 0; }
+  .fx-gl { opacity: 0; transition: opacity .6s var(--ease); }
+  .fx.is-live .fx-gl { opacity: 1; }
+
+  .fx-stage { position: absolute; left: 0; top: 0; width: 1600px; height: 1000px; transform-origin: 0 0; pointer-events: none; font-family: var(--font-display); color: var(--ink); visibility: hidden; }
+  .fx.is-live .fx-stage { visibility: visible; }
+  .fx-scene { position: absolute; inset: 0; opacity: 0; }
+  .fx-card { position: absolute; background: #fff; border-radius: 22px; box-shadow: 0 1px 2px rgb(6 42 45 / .08), 0 30px 70px -20px rgb(6 42 45 / .42); border: 1px solid rgb(6 42 45 / .06); }
+  .fx-row { display: flex; align-items: center; gap: 12px; }
+  .fx-av { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 17px; flex: none; }
+  .fx-muted { color: var(--muted); }
+  .fx-chip { display: inline-flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 999px; font-weight: 650; font-size: 19px; }
+  .fx-bub { max-width: 330px; padding: 12px 16px; border-radius: 18px; font-size: 19px; line-height: 1.35; }
+  .fx-in { background: #EFEDEA; border-bottom-left-radius: 6px; }
+  .fx-joy { background: var(--joy-wash); color: #5c1638; border-bottom-right-radius: 6px; margin-left: auto; }
+  .fx-dots { display: inline-flex; gap: 6px; padding: 16px 18px; background: var(--joy-wash); border-radius: 18px; margin-left: auto; }
+  .fx-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--joy); }
+  .fx-big { font-size: 96px; font-weight: 750; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .fx-bar { height: 22px; border-radius: 8px; transform-origin: 0 50%; }
+  .fx-btn { display: inline-flex; align-items: center; gap: 12px; padding: 16px 22px; border-radius: 14px; font-weight: 700; font-size: 22px; }
+  .fx-btn-arrow { background: var(--ink); color: #fff; border-radius: 9px; width: 34px; height: 34px; display: grid; place-items: center; }
+  .fx-cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; filter: drop-shadow(0 4px 8px rgb(0 0 0 / .3)); opacity: 0; }
+  .fx-q { align-self: flex-end; background: #EFEDEA; border-radius: 18px; padding: 14px 18px; font-size: 21px; min-height: 56px; min-width: 40px; }
+  .fx-caret { display: inline-block; width: 2px; height: 22px; background: var(--ink); vertical-align: -3px; margin-left: 2px; }
+  .fx-a { background: var(--mint); border-radius: 18px; padding: 20px 22px; font-size: 21px; line-height: 1.45; min-height: 250px; }
+  .fx-cap { position: absolute; left: 56px; bottom: 40px; background: var(--ink); color: #fff; border-radius: 22px; padding: 22px 30px 24px; max-width: 720px; opacity: 0; box-shadow: 0 30px 60px -24px rgb(6 42 45 / .6); }
+  .fx-cap b { display: block; font-size: 38px; line-height: 1.12; font-weight: 700; letter-spacing: -.02em; }
+
+  .fx-toggle { position: absolute; right: 16px; bottom: 16px; z-index: 2; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgb(6 42 45 / .72); color: #fff; backdrop-filter: blur(6px); }
+  .fx-toggle .i-play, .fx-toggle.is-paused .i-pause { display: none; }
+  .fx-toggle.is-paused .i-play { display: block; }
+  .fx-cap-m { display: none; }
+
+  @media (max-width: 700px) {
+    .fx { border-radius: 18px; }
+    /* cards and captions would shrink past reading size on a phone: the scene plays alone and the caption sits under it */
+    .fx-stage { display: none; }
+    .fx-cap-m { display: block; margin: 14px auto 0; max-width: 32ch; text-align: center; font-size: 17px; font-weight: 650; color: var(--ink); min-height: 2.8em; }
+  }
+</style>

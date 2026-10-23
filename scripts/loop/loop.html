@@ -1,0 +1,43 @@
+<!doctype html><meta charset=utf-8>
+<style>html,body{margin:0;background:#062A2D;overflow:hidden}#c{display:block}#mark{position:absolute;left:0;top:0;width:250px;transform-origin:50% 50%;will-change:transform,opacity,filter}</style>
+<canvas id=c width=1200 height=1200></canvas>
+<script>
+const W=1200,H=1200,s=100,h=s*Math.sqrt(3)/2,ctx=document.getElementById('c').getContext('2d');
+
+const ss=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x)};
+const hex=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));
+const stops=[[0,hex('#5FD3C7')],[0.5,hex('#14A098')],[1,hex('#FF9A4A')]];
+function grad(d){for(let i=1;i<stops.length;i++){if(d<=stops[i][0]){const a=stops[i-1],b=stops[i],t=(d-a[0])/(b[0]-a[0]);return a[1].map((v,k)=>Math.round(v+(b[1][k]-v)*t))}}return stops[3][1]}
+const dir=[0.67,0.74],nrm=[-0.74,0.67],p0=[210,-80],len=1500,half=300;
+const P=(r,c)=>[c*s+(r%2)*s/2,r*h];
+function render(u){
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#062A2D';ctx.fillRect(0,0,W,H);
+  // lattice
+  ctx.strokeStyle='rgba(20,160,152,.6)';ctx.lineWidth=1.4;ctx.beginPath();
+  const R=Math.ceil(H/h)+1,C=Math.ceil(W/s)+2;
+  for(let r=0;r<=R;r++){const a=P(r,-1),b=P(r,C);ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);
+    for(let c=-1;c<=C;c++){const t=P(r,c);for(const k of[c-1,c,c+1,c+2]){const b2=P(r+1,k);if(Math.abs(b2[0]-t[0])-s/2<0.01&&Math.abs(b2[0]-t[0])>s/2-0.01){ctx.moveTo(t[0],t[1]);ctx.lineTo(b2[0],b2[1])}}}}
+  ctx.stroke();
+  // flowing triangles
+  for(let r=0;r<R;r++)for(let c=-1;c<=C;c++){
+    const A=P(r,c),B=P(r,c+1);let T=r%2===0?P(r+1,c):P(r+1,c+1);
+    const cx=(A[0]+B[0]+T[0])/3,cy=(A[1]+B[1]+T[1])/3;
+    const rx=cx-p0[0],ry=cy-p0[1];const d=(rx*dir[0]+ry*dir[1])/len,n=rx*nrm[0]+ry*nrm[1];
+    if(d<-0.05||d>1.05)continue;
+    const band=1-ss(half*0.55,half,Math.abs(n)); if(band<=0.01)continue;
+    // travelling pulse, periodic in u
+    let ph=((d-u)%1+1)%1; const pulse=ss(0,0.16,ph)*(1-ss(0.26,0.55,ph));
+    const base=0.07; const k0=band*(base+(1-base)*pulse);
+    const clear=1;
+    const col=grad(Math.min(1,Math.max(0,d)));
+    const k=k0*clear;const sc=0.55+0.4*k; const mx=cx,my=cy;
+    ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${Math.min(1,k*1.15)})`;
+    ctx.beginPath();
+    for(const [i,pt] of [A,B,T].entries()){const x=mx+(pt[0]-mx)*sc,y=my+(pt[1]-my)*sc;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+    ctx.fill();
+  }
+  // soft vignette
+  const g=ctx.createRadialGradient(W/2,H/2,W*.25,W/2,H/2,W*.75);g.addColorStop(0,'rgba(6,42,45,0)');g.addColorStop(1,'rgba(6,42,45,.55)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+window.render=render;render(0.5);
+</script>

@@ -1,0 +1,68 @@
+---
+// PRISM presale, served at presale.getprisminsights.com (host rewrite in the root netlify.toml). The waitlist page
+// (src/pages/waitlist.astro) with the email capture taken out and the plans put in: the hero and the closing band
+// point to #pricing, where a salon picks a plan, leaves its details and goes on to Stripe's checkout. Shared
+// sections live in src/components/site/, shared styles in src/styles/site.css.
+import '../styles/base.css';
+import '../styles/site.css';
+import '../styles/presale.css';
+import Icon from '../components/Icon.astro';
+import SiteHead from '../components/site/SiteHead.astro';
+import SiteBackdrop from '../components/site/SiteBackdrop.astro';
+import SiteNav from '../components/site/SiteNav.astro';
+import FilmSection from '../components/site/FilmSection.astro';
+import River from '../components/site/River.astro';
+import Bento from '../components/site/Bento.astro';
+import AiDuo from '../components/site/AiDuo.astro';
+import Pricing from '../components/site/Pricing.astro';
+import SiteClose from '../components/site/SiteClose.astro';
+import SiteFooter from '../components/site/SiteFooter.astro';
+
+const links = [{ href: '#features', label: 'Features' }, { href: '#joy', label: 'Joy' }, { href: '#dash', label: 'Dash' }, { href: '#pricing', label: 'Pricing' }];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <SiteHead
+      title="PRISM presale · Founding salon plans"
+      description="PRISM is the growth desk for salons. Joy answers every lead in under a minute; Dash tells you which marketing books chairs and what to do next. Presale plans are open to a small group of founding salons."
+      ogTitle="PRISM presale · The growth desk for your salon"
+      ogDescription="Every lead answered. Every dollar traced. Pick a PRISM plan while presale is open."
+      canonical="https://presale.getprisminsights.com/"
+    />
+  </head>
+  <body class="wl wl-presale">
+    <a class="wl-skip" href="#pricing">Skip to the plans</a>
+    <SiteBackdrop />
+    <SiteNav links={links} cta={{ label: 'See plans', href: '#pricing' }} />
+
+    <main id="top">
+      <!-- Hero -->
+      <section class="wl-hero wl-wrap">
+        <h1>Every lead answered.<br />Every dollar traced.</h1>
+        <p class="wl-lede">PRISM is the growth desk for your salon. <strong>Joy</strong> answers every lead in under a minute, day or night, and books them in. <strong>Dash</strong> tells you in plain English which marketing fills chairs and what to do next.</p>
+        <div class="ps-hero-cta">
+          <a class="wl-btn" href="#pricing"><span>See presale plans</span><Icon name="arrow-right" size={16} /></a>
+        </div>
+        <p class="wl-fine">Presale is open to a small group of founding salons. PRISM works on top of the booking system you already use, Phorest first.</p>
+      </section>
+
+      <FilmSection />
+      <River />
+      <Bento />
+      <AiDuo />
+      <Pricing />
+
+      <!-- Closing -->
+      <SiteClose heading="Be one of the first salons on PRISM." text="Presale seats are limited.">
+        <a class="wl-btn ps-close-cta" href="#pricing"><span>Choose your plan</span><Icon name="arrow-right" size={16} /></a>
+      </SiteClose>
+    </main>
+
+    <SiteFooter />
+
+    <script>
+      import '../scripts/waitlist-site.ts';
+    </script>
+  </body>
+</html>

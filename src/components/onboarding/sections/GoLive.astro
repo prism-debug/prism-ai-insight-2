@@ -1,0 +1,38 @@
+---
+import Icon from '../../Icon.astro';
+import { SALON } from '../../../data/salon.ts';
+import { TEST_CHAT } from '../../../data/onboarding.ts';
+const pb = SALON.booking.system;
+---
+<div class="ob-golive-top">
+  <section class="ob-card">
+    <p class="ob-ready"><span class="tnum" data-bind="ready">0</span><small>/100 readiness</small></p>
+    <div class="ob-segs big" style="--n:20" data-ready-segs aria-hidden="true">{Array.from({ length: 20 }, () => <i></i>)}</div>
+    <ul class="ob-checks">
+      <li data-check="files"><Icon name="check" size={14} class="ok" /><Icon name="circle-dashed" size={14} class="no" /><span>Your files read</span><span class="t-small" data-check-t>To do</span></li>
+      <li data-check="phorest"><Icon name="check" size={14} class="ok" /><Icon name="circle-dashed" size={14} class="no" /><span>Services synced from {pb}</span><span class="t-small" data-check-t>To do</span></li>
+      <li data-check="sections"><Icon name="check" size={14} class="ok" /><Icon name="circle-dashed" size={14} class="no" /><span>Every section confirmed</span><span class="t-small tnum" data-check-t>0 of 10</span></li>
+      <li class="wait"><Icon name="clock" size={14} /><span>Phone and texting approved</span><span class="t-small">Waiting on provider</span></li>
+      <li class="wait"><Icon name="clock" size={14} /><span>PRISM review</span><span class="t-small">Within 1 business day</span></li>
+    </ul>
+  </section>
+  <section class="ob-card">
+    <header class="ob-card-head"><div><h2 class="t-head"><span class="tnum" data-bind="gaps-n">0</span> gaps to close</h2></div></header>
+    <ul class="ob-gaplist" data-gaps></ul>
+  </section>
+</div>
+
+<section class="ob-card">
+  <header class="ob-card-head"><div><h2 class="t-head">Test chat</h2><p class="t-meta">Ask Joy what a guest would. Nothing is sent to guests.</p></div></header>
+  <div class="ob-chat" role="log" aria-live="polite" data-chat>
+    {TEST_CHAT.slice(0, 2).map((m) => <><p class="you">{m.q}</p><p class="joy">{m.a}</p></>)}
+  </div>
+  <div class="suggest">{TEST_CHAT.slice(2).map((m) => <button type="button" data-ask={m.q}>{m.q}</button>)}</div>
+  <form class="ob-chat-in" data-chat-form><input class="input" placeholder="Ask Joy anything…" aria-label="Ask Joy a test question" autocomplete="off" /><button class="btn btn-primary" type="submit" aria-label="Send"><Icon name="send" size={14} /></button></form>
+  <script type="application/json" id="ob-chat-data" set:html={JSON.stringify(TEST_CHAT)}></script>
+</section>
+
+<section class="ob-card ob-launch" data-launch data-ready="false">
+  <div><strong>Ready when you are</strong><p class="t-small muted" data-launch-sub>Close the gaps and pass PRISM review to turn Joy on.</p></div>
+  <button type="button" class="btn btn-black" data-turn-on disabled><span>Turn Joy on</span><span class="arrow"><Icon name="power" size={14} /></span></button>
+</section>

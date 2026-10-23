@@ -1,0 +1,248 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import Row from '../components/settings/Row.astro';
+import TabMenu from '../components/settings/TabMenu.astro';
+import { SALON, TEAM } from '../data/salon.ts';
+import { WEEK, EXCEPTIONS, NOTIFY_EVENTS, INVOICES, AUDIT, CONSENT_LOG } from '../data/settings.ts';
+import { money, pct0, num } from '../lib/format.ts';
+import { fmtMin } from '../data/bookings-core.ts';
+
+const times = Array.from({ length: 33 }, (_, i) => 6 * 60 + i * 30);
+const hh = (h: number) => h * 60;
+const nav = [['business', 'Business', 'building-2'], ['hours', 'Hours', 'clock'], ['notifications', 'Notifications', 'bell'], ['phone', 'Phone and voicemail', 'phone'], ['plan', 'Plan and billing', 'credit-card'], ['privacy', 'Data and privacy', 'shield-check']];
+const [street, city, stateZip] = SALON.address.split(', ');
+const p = SALON.plan;
+const meters = [
+  { label: 'New leads this month', used: p.leads.used, cap: p.leads.cap, note: 'Counted when a new person first contacts you' },
+  { label: 'Texts sent this month', used: p.texts.used, cap: p.texts.cap, note: 'Joy and team texts to guests' },
+];
+const people = TEAM.map((t) => t.name);
+---
+<AppShell title="Settings" active="settings" description="Business details, opening hours, notifications, phone, plan and privacy.">
+  <form class="st" data-form onsubmit="return false">
+    <header class="tm-head">
+      <div><h1 class="t-title">Settings</h1><p class="t-meta hide-m">Only the owner can change these. Every save is in the audit log.</p></div>
+      <div class="st-save"><span class="unsaved t-small" data-unsaved hidden><i class="dot" style="background:var(--joy)"></i>Unsaved</span><button type="button" class="btn btn-primary" data-save="Settings saved. Joy, the phone line and your forms use them now." disabled>Save changes</button></div>
+    </header>
+
+    <div class="st-layout">
+      <TabMenu name="st" label="Settings section" items={nav.map(([id, label]) => ({ id, label }))} />
+      <nav class="st-nav has-tm" data-tabs role="tablist" aria-label="Settings sections" aria-orientation="vertical">
+        {nav.map(([id, label, icon], i) => <button type="button" class="tab" role="tab" data-panel={id} aria-selected={i === 0 ? 'true' : 'false'}><Icon name={icon} size={15} />{label}</button>)}
+      </nav>
+      <div class="st-body">
+
+        <section data-panel-id="business" aria-label="Business" class="st-sec">
+          <h2 class="t-head st-h">Business</h2>
+          <div class="st-kvs">
+            <div class="st-kv"><label class="st-kl" for="b-name" title="Shown in texts, forms and the voicemail greeting.">Business name</label><input class="input st-ed" id="b-name" value={SALON.name} data-dirty /></div>
+            <div class="st-kv"><label class="st-kl" for="b-phone" title="The number guests call and text.">Phone</label><input class="input st-ed" id="b-phone" value={SALON.phone} data-dirty inputmode="tel" /></div>
+            <div class="st-kv"><label class="st-kl" for="b-site">Website</label><input class="input st-ed" id="b-site" value={SALON.site} data-dirty /></div>
+            <div class="st-kv"><span class="st-kl" title="Used in confirmation texts and the Google listing.">Address</span><button type="button" class="st-val" data-addr-toggle aria-expanded="false" aria-controls="b-addr"><span class="truncate" data-addr-text>{SALON.address}</span><Icon name="chevron-down" size={14} /></button></div>
+            <div class="st-addr" id="b-addr" hidden><label class="field st-a-street">Street<input class="input" id="b-street" value={street} data-dirty data-addr /></label><label class="field">City<input class="input" value={city} data-dirty data-addr /></label><label class="field">State and ZIP<input class="input" value={stateZip} data-dirty data-addr /></label></div>
+            <div class="st-kv"><span class="st-kl" title="Hours, quiet hours and the schedule follow this.">Time zone</span><button type="button" class="st-val" data-menu="tz-menu" aria-haspopup="menu" aria-expanded="false"><span data-tz-text>Central Time (Chicago)</span><Icon name="chevron-down" size={14} /></button><input type="hidden" id="b-tz" value="Central Time (Chicago)" data-dirty /></div>
+            <div class="st-kv"><span class="st-kl" title="PRISM never writes to it without your approval. Connect or disconnect it in Connectors.">Booking system</span><span class="st-static"><StatusIcon state="connected" size={13} />{SALON.booking.system} · read-only · last synced {SALON.booking.lastSync}</span></div>
+          </div>
+          <div class="menu" id="tz-menu" role="menu">{['Central Time (Chicago)', 'Eastern Time (New York)', 'Mountain Time (Denver)', 'Pacific Time (Los Angeles)'].map((z) => <button type="button" role="menuitem" class="menu-item" data-tz={z}>{z}</button>)}</div>
+        </section>
+
+        <section data-panel-id="hours" aria-label="Hours" class="st-sec" hidden>
+          <h2 class="t-head st-h">Opening hours</h2>
+          <p class="st-one t-small"><Icon name="sparkles" size={14} />Joy, your phone line and your forms all use these hours. Change them once, here.</p>
+          <div class="list" id="hours-list">
+            {WEEK.map((d) => (
+              <div class="row h-row" data-d={d.d}>
+                <span class="cell name">{d.label}</span>
+                <label class="cell"><input type="checkbox" class="switch" data-dirty data-open checked={!!d.open} aria-label={`${d.label} open`} /><span class="t-small muted" data-open-label>{d.open ? 'Open' : 'Closed'}</span></label>
+                <span class="cell h-times">
+                  <select class="select" data-from data-dirty aria-label={`${d.label} opens`} disabled={!d.open}>{times.map((m) => <option value={m} selected={!!d.open && m === hh(d.open[0])}>{fmtMin(m)}</option>)}</select>
+                  <span class="muted">to</span>
+                  <select class="select" data-to data-dirty aria-label={`${d.label} closes`} disabled={!d.open}>{times.map((m) => <option value={m} selected={!!d.open && m === hh(d.open[1])}>{fmtMin(m)}</option>)}</select>
+                </span>
+                <span class="cell right hide-m"><button type="button" class="btn btn-sm btn-quiet" data-copy-hours={d.d} disabled={!d.open}>Copy to all open days</button></span>
+              </div>
+            ))}
+          </div>
+          <p class="t-small muted st-preview" data-hours-preview aria-live="polite"></p>
+
+          <h3 class="t-head st-h st-h2">Exceptions</h3>
+          <div class="list" id="exc-list">
+            {EXCEPTIONS.map((e) => (
+              <div class="row x-row" data-exc>
+                <span class="cell"><Icon name={e.kind === 'closed' ? 'calendar-x' : 'calendar-clock'} size={15} /><span class="name">{e.label}</span></span>
+                <span class="cell muted truncate">{e.rule}</span>
+                <span class="cell tnum">{e.kind === 'closed' ? 'Closed' : `${fmtMin(e.hours![0] * 60)} to ${fmtMin(e.hours![1] * 60)}`}</span>
+                <span class="cell right"><button type="button" class="btn btn-sm btn-quiet" data-remove-exc>Remove</button></span>
+              </div>
+            ))}
+          </div>
+          <div class="x-add" id="exc-add">
+            <label class="field">Name<input class="input" id="x-name" placeholder="Staff day" /></label>
+            <label class="field">Date<input class="input" type="date" id="x-date" /></label>
+            <label class="field">Hours<select class="select" id="x-kind"><option value="Closed">Closed all day</option><option value="Closes at 3 pm">Closes at 3 pm</option><option value="Opens at noon">Opens at noon</option></select></label>
+            <button type="button" class="btn" id="x-go">Add exception</button>
+          </div>
+        </section>
+
+        <section data-panel-id="notifications" aria-label="Notifications" class="st-sec" hidden>
+          <h2 class="t-head st-h">Who gets what</h2>
+          <div class="list">
+            <div class="row head e-row"><span class="cell">When this happens</span><span class="cell right">Push</span><span class="cell right">Text</span><span class="cell right">Email</span><span class="cell hide-m">Goes to</span></div>
+            {NOTIFY_EVENTS.map((e) => (
+              <div class="row e-row">
+                <span class="cell"><span class="truncate"><span class="name">{e.label}</span><span class="sub hide-m" style="display:block">{e.why}</span></span></span>
+                <label class="cell right"><input type="checkbox" class="switch" data-dirty checked={e.push} aria-label={`${e.label}: push`} /></label>
+                <label class="cell right"><input type="checkbox" class="switch" data-dirty checked={e.sms} aria-label={`${e.label}: text`} /></label>
+                <label class="cell right"><input type="checkbox" class="switch" data-dirty checked={e.email} aria-label={`${e.label}: email`} /></label>
+                <span class="cell hide-m"><select class="select" data-dirty aria-label={`${e.label}: goes to`}>{['Owner', 'Front desk', 'Manager', 'Everyone on shift'].map((o) => <option selected={o === e.to}>{o}</option>)}</select></span>
+              </div>
+            ))}
+          </div>
+          <p class="t-small muted" style="padding-top:var(--s-2)">Each person can also switch their own alerts on Team. <a class="link" href="/team#alerts">Per-person alerts</a></p>
+          <h3 class="t-head st-h st-h2">Quiet hours</h3>
+          <Row label="Hold non-urgent alerts and guest texts" hint="Missed calls and Joy hand-offs wait until the morning. Guests never get a marketing text in quiet hours."><label class="st-inline"><input type="checkbox" class="switch" data-dirty checked />On</label></Row>
+          <Row label="Quiet from" for="q-from"><span class="h-times"><select class="select" id="q-from" data-dirty>{times.filter((m) => m >= 18 * 60).map((m) => <option value={m} selected={m === 21 * 60}>{fmtMin(m)}</option>)}</select><span class="muted">until</span><select class="select" data-dirty aria-label="Quiet until">{times.filter((m) => m <= 11 * 60).map((m) => <option value={m} selected={m === 8 * 60}>{fmtMin(m)}</option>)}</select></span></Row>
+        </section>
+
+        <section data-panel-id="phone" aria-label="Phone and voicemail" class="st-sec" hidden>
+          <h2 class="t-head st-h">When someone calls {SALON.phone}</h2>
+          <ol class="flow">
+            <li><Icon name="phone-incoming" size={15} /><span><b>Rings the front desk</b> for <span class="tnum" data-ring-out>20</span> seconds</span></li>
+            <li><Icon name="sparkles" size={15} /><span><b>Then Joy</b>. Joy answers texts and Instagram and Facebook messages; voice answering is off: it needs the voice add-on (ElevenLabs), not on your plan, so Joy texts the caller back</span></li>
+            <li><Icon name="voicemail" size={15} /><span><b>Voicemail</b> takes the message if the caller stays on the line</span></li>
+          </ol>
+          <Row label="Ring staff first for" for="ph-ring" hint="Between 10 and 40 seconds."><span class="st-inline"><input class="input" id="ph-ring" type="number" min="10" max="40" step="5" value="20" data-dirty style="width:84px" data-ring /> seconds</span></Row>
+          <Row label="Who rings" hint="Phones that ring first."><span class="st-inline">{['Tamsin Ortiz', 'Devon Park'].map((n) => <span class="chip on"><Avatar name={n} size="sm" />{n.split(' ')[0]}</span>)}</span></Row>
+          <Row label="Voicemail greeting" for="ph-vm" hint="Read aloud in the default voice. Joy's custom voice is off."><div class="st-vm"><textarea class="textarea" id="ph-vm" rows="3" data-dirty maxlength="240" data-count="vm-count">Thanks for calling Marlow &amp; Finch in Evanston. We can't pick up right now. Leave your name and number, or text this number and we'll get back to you today.</textarea><div class="st-vm-f"><span class="t-small muted tnum"><span id="vm-count">0</span> of 240 characters</span><button type="button" class="btn btn-sm" data-toast="Playing the greeting in the default voice">Play greeting</button></div></div></Row>
+          <Row label="Text back after a missed call" hint="Sent only if the caller agreed to texts, and never in quiet hours."><label class="st-inline"><input type="checkbox" class="switch" checked data-dirty />On</label></Row>
+          <Row label="Text-back message" for="ph-tb"><textarea class="textarea" id="ph-tb" rows="2" data-dirty>Hi, sorry we missed your call at Marlow &amp; Finch. What can we help with? You can reply here and we'll take it from there.</textarea></Row>
+        </section>
+
+        <section data-panel-id="plan" aria-label="Plan and billing" class="st-sec" hidden>
+          <h2 class="t-head st-h">Plan</h2>
+          <div class="pl-top"><div><div class="pl-name">{p.name}</div><div class="t-small muted">{money(p.price)} a month · renews Nov 1, 2026</div></div><button type="button" class="btn" data-toast="Plan changes are not part of this prototype">Change plan</button></div>
+          <div class="list">
+            {meters.map((m) => (
+              <div class="row m-row"><span class="cell"><span class="truncate"><span class="name">{m.label}</span><span class="sub" style="display:block">{m.note}</span></span></span>
+                <span class="cell"><span class="meter" tabindex="0" data-tip={`${m.label}|Used~${num(m.used)} of ${num(m.cap)}|${Math.round((m.used / m.cap) * 100)}% of this month’s allowance${m.used / m.cap > 0.85 ? '|Close to the limit' : ''}`} role="img" aria-label={`${m.label}: ${m.used} of ${m.cap}`}><i style={`width:${(m.used / m.cap) * 100}%;background:${m.used / m.cap > 0.85 ? 'var(--d-orange)' : 'var(--d-teal)'}`}></i></span></span>
+                <span class="cell right tnum"><b>{num(m.used)}</b>&nbsp;<span class="muted">of {num(m.cap)}</span></span></div>
+            ))}
+            <div class="row m-row"><span class="cell"><span class="truncate"><span class="name">Voice minutes</span><span class="sub" style="display:block">Needs the voice add-on, not on your plan</span></span></span><span class="cell"></span><span class="cell right muted">Not included</span></div>
+          </div>
+          <h3 class="t-head st-h st-h2">Payment method</h3>
+          <Row label="Card on file" hint="Handled by Stripe. PRISM never sees the card number."><span class="st-inline"><Icon name="credit-card" size={15} />Visa ending 4242 <button type="button" class="btn btn-sm" data-toast="Opening Stripe to update the card">Update card</button></span></Row>
+          <h3 class="t-head st-h st-h2">Invoices</h3>
+          <div class="list">
+            <div class="row head i-row"><span class="cell">Invoice</span><span class="cell hide-m">Date</span><span class="cell right">Amount</span><span class="cell">Status</span><span class="cell right"></span></div>
+            {INVOICES.map((i) => <div class="row i-row"><span class="cell name">{i.id}</span><span class="cell muted hide-m">{i.date}</span><span class="cell right tnum">{money(i.amount)}</span><span class="cell"><StatusIcon state="done" size={13} />{i.status}</span><span class="cell right"><button type="button" class="btn btn-sm btn-quiet" data-toast={`Downloading ${i.id}.pdf`}>Download</button></span></div>)}
+          </div>
+        </section>
+
+        <section data-panel-id="privacy" aria-label="Data and privacy" class="st-sec" hidden>
+          <h2 class="t-head st-h">Your data</h2>
+          <Row label="Export everything" hint="Clients, leads, conversations and bookings as spreadsheets."><button type="button" class="btn" data-toast="Export started. We will email a link to Casey when it is ready.">Request export</button></Row>
+          <Row label="Delete a person" hint="Soft delete first. The record leaves lists and Joy stops contacting them; it can be restored from the audit log."><span class="st-inline"><input class="input" id="del-name" placeholder="Client name" style="max-width:220px" aria-label="Client name" /><button type="button" class="btn btn-danger" id="del-go">Request deletion</button></span></Row>
+
+          <h3 class="t-head st-h st-h2">Consent log</h3>
+          <div class="list">
+            <div class="row head c-row"><span class="cell">Guest</span><span class="cell">Change</span><span class="cell hide-m">How</span><span class="cell right">When</span></div>
+            {CONSENT_LOG.map((c) => <div class="row c-row"><span class="cell name truncate">{c.name}</span><span class="cell truncate">{c.change}</span><span class="cell muted hide-m">{c.via}</span><span class="cell right muted tnum">{c.t}</span></div>)}
+          </div>
+
+          <h3 class="t-head st-h st-h2">Audit log</h3>
+          <div class="toolbar" style="padding-left:0" data-filterable>
+            <div class="seg" role="group" aria-label="Filter audit log">
+              {[['', 'All'], ['joy', 'Joy'], ['team', 'Team'], ['prism', 'PRISM']].map(([v, l]) => <button type="button" data-filter-key="actor" data-filter-value={v} aria-pressed={v === '' ? 'true' : 'false'}>{l}</button>)}
+            </div>
+            <div class="list" style="flex-basis:100%">
+              {AUDIT.map((a) => (
+                <div class="row a-row" data-row data-actor={a.actor}>
+                  <span class="cell">{a.actor === 'joy' ? <Avatar kind="joy" size="sm" /> : a.actor === 'prism' ? <Avatar kind="dash" size="sm" /> : <Avatar name={a.who} size="sm" />}<span class="truncate"><span class="name">{a.who}</span> <span>{a.what}</span></span></span>
+                  <span class="cell sub truncate hide-m">{a.why}</span>
+                  <span class="cell right muted tnum">{a.t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <div class="st-savebar" role="region" aria-label="Save settings"><span class="unsaved t-small" data-unsaved hidden><i class="dot" style="background:var(--joy)"></i>Unsaved changes</span><span class="t-small muted st-clean" data-clean>No changes yet</span><button type="button" class="btn btn-primary" data-save="Settings saved. Joy, the phone line and your forms use them now." disabled>Save changes</button></div>
+  </form>
+  <script>import '../scripts/settings.ts';
+    document.addEventListener('click', (e) => { const t = (e.target as HTMLElement).closest('[role="tab"]'); if (t) t.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+  </script>
+</AppShell>
+
+<style is:global>
+  .st .t-title { font-size: 20px; }
+  .st { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-6); max-width: 1100px; }
+  .st-savebar { display: none; }
+  .input.st-ed { border-color: transparent; background: transparent; padding-left: 8px; margin-left: -8px; font-size: var(--t-14); font-weight: 500; cursor: text; min-height: 36px; }
+  .input.st-ed:hover { background: var(--hover); border-color: var(--line); }
+  .input.st-ed:focus { background: var(--surface); }
+  .st-save .btn-primary[disabled], .st-savebar .btn-primary[disabled] { opacity: 1; background: var(--sunken); border-color: var(--line); color: var(--ink-4); }
+  .st-save .btn-primary { min-width: 120px; }
+  .tm-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s-4); } .unsaved { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); white-space: nowrap; }
+  .st-save { display: flex; align-items: center; gap: var(--s-3); }
+  .st-layout { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: var(--s-8); align-items: start; }
+  .st-nav { display: grid; gap: 2px; position: sticky; top: 68px; }
+  .st-nav .tab { height: 32px; justify-content: flex-start; gap: var(--s-2); } .st-nav .tab svg { color: var(--ink-3); }
+  .st-nav .tab[aria-selected="true"] svg { color: var(--violet); }
+  .st-body { min-width: 0; }
+  .st-sec { display: block; }
+  .st-h { padding: 0 0 var(--s-3); } .st-h2 { padding-top: var(--s-8); }
+  .st-kvs { border-bottom: 1px solid var(--line); }
+  .st-kv { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); min-height: 44px; border-top: 1px solid var(--line); }
+  .st-kl { flex: none; width: 160px; font-size: var(--t-13); font-weight: 500; color: var(--ink-2); }
+  .st-kv .input.st-ed { flex: 1; min-width: 0; text-align: right; margin: 0; padding: 0 8px; }
+  .st-val { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--s-2); flex: 1; min-width: 0; min-height: 36px; padding: 0 8px; border: 1px solid transparent; border-radius: var(--r-md); font-size: var(--t-14); font-weight: 500; color: var(--ink); text-align: right; }
+  .st-val:hover { background: var(--hover); border-color: var(--line); } .st-val svg { color: var(--ink-3); flex: none; transition: transform var(--dur) var(--ease); }
+  .st-val[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .st-kv .st-static { flex: 1; justify-content: flex-end; text-align: right; padding: 0 8px; color: var(--ink-2); }
+  .st-addr[hidden] { display: none; } .st-addr { padding: var(--s-2) 0 var(--s-4); }
+  .st-row { display: grid; grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); gap: var(--s-6); padding: var(--s-4) 0; border-top: 1px solid var(--line); align-items: start; }
+  .st-row:first-of-type { border-top: 1px solid var(--line); }
+  .st-l p { margin-top: 2px; max-width: 34ch; } .st-c { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; max-width: 560px; } .st-c > .input, .st-c > .select, .st-c > .textarea { width: 100%; }
+  .st-addr { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); width: 100%; } .st-a-street { grid-column: 1 / -1; } .st-c .select, .st-c .input, .st-c .textarea { max-width: 100%; }
+  .tm-head p { margin-top: 2px; }
+  .st-static, .st-inline { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--t-13); }
+  .st-one { display: flex; align-items: center; gap: var(--s-2); color: var(--violet-deep); font-weight: 600; padding-bottom: var(--s-3); }
+  .st-preview { padding-top: var(--s-3); }
+  .h-row { --cols: 110px 100px minmax(0, 1fr) 170px; min-height: 48px; } .h-times { display: inline-flex; align-items: center; gap: var(--s-2); } .h-times .select { width: 118px; }
+  .x-row { --cols: minmax(180px, 1.2fr) minmax(0, 1.6fr) 150px 90px; }
+  .x-add { display: flex; gap: var(--s-3); align-items: flex-end; flex-wrap: wrap; padding: var(--s-4) 0 0; } .x-add .field { min-width: 150px; }
+  .e-row { --cols: minmax(0, 1.8fr) 56px 56px 56px minmax(140px, 1fr); }
+  .flow { display: grid; gap: 0; margin: 0 0 var(--s-4); list-style: none; } .flow li { display: flex; gap: var(--s-3); align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); font-size: var(--t-13); } .flow li svg { color: var(--violet); margin-top: 2px; flex: none; }
+  .st-vm { width: 100%; display: grid; gap: var(--s-2); } .st-vm-f { display: flex; justify-content: space-between; align-items: center; }
+  .pl-top { display: flex; justify-content: space-between; align-items: center; gap: var(--s-4); padding: var(--s-3) 0 var(--s-4); } .pl-name { font-size: var(--t-22); font-weight: 600; letter-spacing: -0.015em; }
+  .m-row { --cols: minmax(0, 1.4fr) minmax(120px, 1fr) 130px; min-height: 52px; }
+  .i-row { --cols: 120px minmax(0, 1fr) 90px 90px 100px; }
+  .c-row { --cols: minmax(140px, 1fr) minmax(0, 2fr) 160px 140px; } .a-row { --cols: minmax(0, 2.2fr) minmax(0, 1.2fr) 150px; }
+  .meter { display: block; height: 6px; border-radius: 6px; background: var(--d-track); overflow: hidden; width: 100%; } .meter i { display: block; height: 100%; border-radius: 6px; background: var(--d-teal); }
+  .link { color: var(--violet-deep); font-weight: 600; } .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  @media (max-width: 960px) { .st-layout { grid-template-columns: 1fr; gap: var(--s-4); } .st-nav { position: static; display: flex; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); padding-bottom: var(--s-2); padding-right: 24px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); } .st-nav .tab { flex: none; white-space: nowrap; } }
+  @media (max-width: 900px) {
+    .st { padding-bottom: calc(60px + 60px + var(--s-4) + 8px + env(safe-area-inset-bottom)); }
+    .tm-head .st-save { display: none; }
+    
+    .st-sec > .st-h:first-child { display: none; }
+    .st-row { padding: var(--s-3) 0; gap: 2px; } .st-c { min-height: 0; }
+    .st .input, .st .select, .st .textarea { min-height: 44px; } .st .input.st-ed { min-height: 44px; } .st-val { min-height: 44px; } .st-kv { min-height: 48px; gap: var(--s-3); } .st-kl { width: 110px; } .st-kv .st-static { font-size: var(--t-12); }
+    .st-addr { grid-template-columns: 1fr; }
+    .st-savebar { position: fixed; z-index: 55; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 8px var(--s-4) calc(60px + 8px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); box-shadow: none; }
+    .st-savebar .btn-primary { min-width: 140px; min-height: 44px; }
+    .st-savebar .unsaved:not([hidden]) + .st-clean { display: none; }
+    .st-row { grid-template-columns: 1fr; gap: var(--s-2); }
+    .h-row { --cols: 1fr auto; row-gap: 6px; padding-top: 8px; padding-bottom: 8px; } .h-row .h-times { grid-column: 1 / -1; } .h-row .h-times .select { width: 100%; flex: 1; }
+    .x-row { --cols: minmax(0, 1fr) auto auto; } .tm-head { flex-wrap: wrap; } .x-row .truncate { display: none; }
+    .e-row { --cols: minmax(0, 1fr) 40px 40px 40px; }
+    .m-row { --cols: minmax(0, 1fr) 90px; } .m-row .meter { display: none; }
+    .i-row { --cols: minmax(0, 1fr) 70px 90px; } .i-row .cell:nth-child(5) { display: none; }
+    .c-row { --cols: minmax(0, 1fr) 90px; } .c-row .cell:nth-child(2) { display: none; } .a-row { --cols: minmax(0, 1fr) 90px; }
+    .pl-top { flex-wrap: wrap; }
+  }
+</style>

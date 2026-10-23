@@ -1,0 +1,333 @@
+---
+import '../styles/base.css';
+
+const upgrades = [
+  {
+    title: 'Every number gives one answer',
+    img: 'home-numbers', alt: 'New Home numbers panel: spend, booked value, left after ad spend and booked per $1, each with an arrow against the previous period', narrow: true,
+    before: 'The same question gets three answers. A new client costs $771 on the dashboard, $81 on Retention and $10.80 on Ads. Each page picks its own date range, so nothing compares. Insight cards give advice with no button.',
+    now: 'One definition for every figure, one date range, and an arrow against the previous period on every number. Home opens with a one-sentence verdict and a single next step: “Reply to the 58 waiting leads”.',
+  },
+  {
+    title: 'Speed to lead is a queue, not a hunch',
+    img: 'leads', alt: 'New Leads: tabs for Needs you first, with waiting time, handler and likely value per lead',
+    before: 'The team takes about 17 hours to book a new lead, and there is no “not answered yet” view, no waiting timer and no alert. 983 of 1,557 leads sit in one board column, so nobody can see who needs what.',
+    now: 'Leads opens on who needs you first. Every lead shows how long they have waited, who has it (Joy, a teammate or nobody) and what they are likely worth. Counts and tabs replace the 983-lead pile.',
+  },
+  {
+    title: 'One thread per guest, across every channel',
+    img: 'inbox', alt: 'New Inbox: texts, DMs and calls in one thread with a voicemail transcript, summary and suggested reply',
+    before: 'Calls are separate rows, so one caller can appear four times. A call is a recording with no transcript, summary or outcome. SMS and “Twilio SMS” are separate filters, and the composer has no templates or booking link.',
+    now: 'Texts, DMs, forms and calls land in one thread. A call shows its transcript, a summary and its outcome. Dash suggests the reply, quick templates sit under the box, and consent and quiet hours are shown before you send.',
+  },
+  {
+    title: 'Marketing finally ties to booked revenue',
+    img: 'marketing', alt: 'New Marketing: each channel’s spend, leads, bookings and booked revenue per dollar',
+    before: 'Meta’s 893 “conversions” are not tied to leads, bookings or revenue. Most spend is typed in by hand and Facebook stops at 8 Sep, so the dashboard’s return runs on partial data.',
+    now: 'One table: each channel’s spend, leads, bookings and booked value, with “back for every $1” at the top. Agency retainers and listing fees sit beside ad spend. A tracking-health check flags what is broken.',
+  },
+  {
+    title: 'Joy is taught with facts, and you can test her',
+    img: 'brand', alt: 'New Brand Hub: structured business facts beside a Test Joy chat and a coverage list',
+    before: 'The AI is changed by editing long prompt text with no preview. Business hours disagree between the Knowledge Base and the voice setting, so callers can be told the wrong hours. Follow-up templates are never scheduled.',
+    now: 'Structured fields feed Joy’s texts and calls from one source. “Test Joy” lets you ask as a guest with nothing sent. A coverage list shows the questions guests asked that Joy could not answer, with “Add fact” beside each.',
+  },
+  {
+    title: 'Win-back is one tap, and the list is already clean',
+    img: 'retention', alt: 'New Retention: money at risk, client lifecycle and a selectable win-back list',
+    before: 'At-risk and lapsed lists are read-only: no text, no export, no win-back. Language jumps to LTV : CAC and ROAS. A 12-second blank screen precedes the numbers.',
+    now: 'Retention leads with money waiting: what overdue clients are worth. The list is pre-filtered to people who agreed to texts and promotions, and one button starts the win-back.',
+  },
+];
+
+const flows = [
+  {
+    title: 'Reply to a lead who is waiting',
+    before: ['Read the advice card on the Dashboard', 'Open Leads; there is no “not answered” view', 'Filter and scan 10 rows a page', 'Open the drawer; the table squeezes sideways', 'Switch the AI off to take over', 'Type a 160-character text', 'Log the outreach by hand'],
+    now: ['Tap “Reply to the 58 waiting leads” on Home', 'Open the longest-waiting lead; Dash has drafted a reply', 'Send. The outreach logs itself'],
+  },
+  {
+    title: 'Win back overdue clients',
+    before: ['Open Retention and tap At-risk', 'Read a list with no actions', 'Copy names into another tool to text them'],
+    now: ['Tap “Win back 118 clients” on Home or Retention', 'Review the list, already limited to clients who agreed to texts', 'Send'],
+  },
+  {
+    title: 'Confirm a booking request',
+    before: ['Find the Booking Requests page; no alert told you', 'Read a card with a status and no confirm or decline buttons', 'Check Appointments, which is a sync list, for the calendar'],
+    now: ['See the count on the Bookings tab', 'Tap Review; Joy has suggested a time and a stylist', 'Approve. Nothing reaches the booking system until you do'],
+  },
+  {
+    title: 'Give the front desk the right access',
+    before: ['Create a user', 'Every user is an admin, including settings and deletes'],
+    now: ['Team › Invite someone', 'Pick a role: manager, front desk, stylist or marketing partner', '“Who sees what” shows exactly which pages they can open'],
+  },
+  {
+    title: 'Teach Joy something new',
+    before: ['Edit a long block of prompt text', 'Save and hope it behaves', 'Find out from a guest'],
+    now: ['Brand Hub shows unanswered guest questions', 'Tap “Add fact” and write the answer', 'Ask Joy as a guest in Test Joy, then publish'],
+  },
+];
+
+const pages = [
+  { id: 'home', from: 'Dashboard', to: 'Home', verdict: 'Redesign', img: 'home', alt: 'New Home with the verdict, next-step button and numbers',
+    old: ['Health score ring with no breakdown', 'Insight cards give advice, no buttons', 'Spend against bookings as the “bottom line”, plus website health', 'Its own date range, no previous-period arrows', 'Floating phone button on every page'],
+    now: ['One-sentence verdict and one next-step button', '“Do this week” list, each action with its likely value', '“Needs you now”: waiting leads grouped by who has them', 'Every number shows “was” and an arrow against the previous period', 'Joy’s last 30 days and the salon health score beside it'] },
+  { id: 'leads', from: 'Leads', to: 'Leads and the lead record', verdict: 'Redesign', img: 'leads', alt: 'New Leads grouped by who needs you first, with waiting time, handler and likely value',
+    old: ['List or board, 10 rows a page across 1,557 leads', 'Outreach logged by hand: Text, Called, Emailed', 'Duplicates flagged but not merged', 'The drawer squeezes the table sideways', '“Contacted (Takeover)” holds 983 leads'],
+    now: ['Tabs: Needs you first, Hot leads, After hours, Booked by Joy, All', 'Waiting time, handler, score and likely value on every row', 'Grouped as Not answered, Needs a person, and so on', 'Row checkboxes and filters; list and board views', 'One lead record with a single timeline'] },
+  { id: 'clients', from: 'Clients', to: 'Clients and the client record', verdict: 'Redesign', img: 'clients', img2: 'client-record', alt: 'New Clients list with stage, next visit, ticket, lifetime value and stylist', alt2: 'A client record with upcoming visit, history, notes and consent',
+    old: ['The leads table with a stage column added', 'Header reads “316 leads found” on the Clients page', 'Contact history is hand-typed notes', 'Board uses lead columns, not client stages', 'No visit list, services or rebook date'],
+    now: ['Tabs: All, Active, At risk, Lapsed, each with a count', 'Next visit, average ticket, lifetime value and stylist per row', '“Win back 118” in the header', 'Client record: upcoming visit, visit history, notes, consent', '“Book next visit”, Text and Call on the record'] },
+  { id: 'retention', from: 'Retention', to: 'Retention', verdict: 'Keep', img: 'retention', alt: 'New Retention leading with money waiting and a selectable win-back list',
+    old: ['KPI by stage matrix, LTV : CAC and ROAS', 'Lifecycle counts: active, at risk, lapsed', 'At-risk list is read-only: no text, export or win-back', 'Analyst words right after a plain-English dashboard', 'Blank for about 12 seconds while loading'],
+    now: ['Leads with money waiting: what overdue clients are worth', 'Can be texted versus not reachable, split by consent', 'Lifecycle bar: active, at risk, lapsed', 'Win-back list preselected to clients who can be texted', '“Win back 118 clients” starts it; rebook-due list below'] },
+  { id: 'inbox', from: 'Communication', to: 'Inbox', verdict: 'Redesign', img: 'inbox', alt: 'New Inbox with a needs-reply queue, one thread per guest and a suggested reply',
+    old: ['Three panes; the middle is empty on open', 'Each call is its own row, recording only', 'SMS and “Twilio SMS” are separate filters', 'All-time phone stats push the contact panel down', 'Composer: 160 characters, no templates'],
+    now: ['Needs-reply queue with waiting times', 'One thread per guest: texts, DMs, forms and calls', 'Voicemail transcript, summary and outcome', 'Dash-suggested reply and quick templates', 'Consent and quiet hours shown before you send'] },
+  { id: 'marketing', from: 'Ads and Ad Spend', to: 'Marketing', verdict: 'Merge', img: 'marketing', alt: 'New Marketing with spend, leads, bookings and booked revenue per channel',
+    old: ['Ads: Meta campaigns only', 'Ad Spend: a hand-typed ledger; Facebook stops at 8 Sep', 'Meta “conversions” not tied to leads or revenue', 'Reach differs between tabs', 'Calendar-year default dates, three-decimal costs'],
+    now: ['A verdict line: “Each $1 on ads brought back $1.60”', 'Spend, booked, left after ads and booked per $1, with “was”', 'Per-channel table down to booked revenue', 'Agency retainer and listing fees beside ad spend', 'Tracking checks to fix and an agency report'] },
+  { id: 'bookings', from: 'Booking Requests and Appointments', to: 'Bookings', verdict: 'Merge', img: 'bookings', alt: 'New Bookings with requests grouped by urgency and Joy’s suggested times',
+    old: ['Requests: cards with a status, no confirm or decline', 'No pending queue and no alert', 'Appointments: a sync list per contact', 'No calendar, no upcoming view, no no-shows', 'Sync controls sit on the page'],
+    now: ['Tabs: Requests, Schedule, Upcoming, No-shows', 'Requests grouped by urgency', 'Joy suggests a time and a stylist for each', 'Review, approve or decline in one place', 'The booking system changes only after you approve'] },
+  { id: 'brand', from: 'Knowledge Base', to: 'Brand Hub and Joy', verdict: 'Redesign', img: 'brand', alt: 'New Brand Hub with structured business facts beside a Test Joy chat and a coverage list',
+    old: ['Ten-step questionnaire with long prompt text boxes', 'Documents shown as raw chunks with IDs, and “Delete All”', 'Day 1 to Day 13 templates, never scheduled', 'Hours disagree with the voice setting', 'No test or preview'],
+    now: ['Fields for hours, services and prices, policies and FAQs', 'Test Joy chat beside the form; nothing is sent', 'Coverage list: guest questions Joy could not answer, with “Add fact”', 'Joy page: channel switches, hand-off rules, sequences', 'Hours kept in one place and shared everywhere'] },
+  { id: 'forms', from: 'Forms', to: 'Forms', verdict: 'Keep', img: 'forms', alt: 'New Forms with viewed, started, submitted and booked counts for each form',
+    old: ['Booking forms tied to services and a Meta dataset ID', 'Quizzes with scoring and show-if logic', 'No views, submissions or booking rate', 'A test quiz live at a public address', 'No preview'],
+    now: ['Viewed, started, submitted, booked per form, with drop-off', 'Ad source tracking shown on each form', 'Text consent shown per form', 'Published, draft and test groups', 'Test forms left out of every metric'] },
+  { id: 'team', from: 'Team', to: 'Team and roles', verdict: 'Rebuild', img: 'team', alt: 'New Team with roles, what each can see and last active',
+    old: ['Six users, all admins', 'No roles', 'Internal IDs shown', 'A test admin account still active', 'Create user and nothing else'],
+    now: ['Roles: Owner, Manager, Front desk, Stylist, Marketing partner', '“Who sees what” access matrix', 'Alerts set per person', 'Stylist scorecards', 'Invite someone; last active shown'] },
+  { id: 'settings', from: 'App Settings', to: 'Settings, Joy and Connectors', verdict: 'Rebuild', img: 'connectors', alt: 'New Connectors with connected, needs attention and not connected states', 
+    old: ['A key and value editor with typed settings', 'Business hours entered as JSON by weekday number', 'One flat list; the header says 13, 12 are shown', 'No connection health', 'Settings written for a developer, not an owner'],
+    now: ['Grouped: Business, Hours, Notifications, Phone, Plan, Data', 'Hours as a picker, one source of truth', 'Connectors: connected, needs attention, not connected', 'Reconnect button; sign-in details are never shown', 'Every save in an audit log, owner only'] },
+];
+
+const extras = [
+  ['Ask Dash', 'Ask a question about the salon in plain words; every answer ends with a next step.'],
+  ['Search and jump (⌘K)', 'Find a guest, a page or an action from anywhere.'],
+  ['Notifications', 'A bell and per-person alerts for waiting leads and new requests.'],
+  ['Reviews', 'Ask for reviews after visits and answer them from one place.'],
+  ['Connectors', 'Booking system, Meta, Google and Instagram with a visible health state.'],
+  ['Locations', 'Switch between the company and each location from under the logo.'],
+  ['Built for the phone', 'A real mobile layout with a tab bar. The old app has no phone layout.'],
+  ['Audit log', 'Every settings change is recorded and only the owner can make them.'],
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#F5F3EF" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>What changed · PRISM</title>
+    <meta name="description" content="The current dashboard next to the new PRISM: the major upgrades and the smoother workflows, on one page." />
+    <link rel="icon" type="image/svg+xml" href="/brand/mark-color.svg" />
+  </head>
+  <body class="up">
+    <header class="up-top">
+      <a class="up-logo" href="/upgrades" aria-label="PRISM"><img src="/brand/mark-color.svg" alt="" width="26" height="30" /><img src="/brand/wordmark-midnight-bold.svg" alt="PRISM" width="64" height="20" /></a>
+      <span class="up-tag">Current dashboard vs new PRISM</span>
+      <a class="up-btn" href="/login"><span class="up-l">Open the live prototype</span><span class="up-s">Open prototype</span><span class="up-arrow" aria-hidden="true">→</span></a>
+    </header>
+
+    <main>
+      <section class="up-hero">
+        <div class="up-hero-copy">
+          <h1>From a report you read to a desk you work from.</h1>
+          <p>The current dashboard tells owners how the salon is doing. The new PRISM does that in one sentence, then puts the next step one tap away: reply, win back, confirm. Same plain-English idea, built around the work.</p>
+          <ul class="up-facts" aria-label="The short version">
+            <li><strong>13 pages become 14, each with one job.</strong> Ads and Ad Spend merge, Booking Requests and Appointments merge, and Reviews, Joy and Connectors are new.</li>
+            <li><strong>Every number links to an action.</strong> The current insight cards give advice with no button.</li>
+            <li><strong>One definition per metric.</strong> The same question no longer gets three answers.</li>
+          </ul>
+        </div>
+        <figure class="up-shot up-shot-hero"><img src="/compare/home.webp" alt="New Home screen with the verdict, next-step button and numbers" width="1280" height="800" fetchpriority="high" /></figure>
+      </section>
+
+      <section class="up-sec" aria-labelledby="pages">
+        <h2 id="pages">Page by page</h2>
+        <p class="up-lede">Every page in the current app next to what replaced it. Left: the current design, as captured on 10 Oct 2026 with customer details pixelated. Right: the working prototype. Click either to enlarge.</p>
+        <nav class="up-jump" aria-label="Jump to a page">
+          {pages.map((p) => <a href={`#pg-${p.id}`}>{p.to.split(' and ')[0]}</a>)}
+        </nav>
+        <div class="up-pages">
+          {pages.map((p) => (
+            <article class="up-pg" id={`pg-${p.id}`}>
+              <header class="up-pg-head">
+                <h3>{p.from}<span class="up-to" aria-hidden="true">→</span><span class="sr-only"> becomes </span>{p.to}</h3>
+                <span class="up-verdict">{p.verdict}</span>
+              </header>
+              <div class="up-pg-grid">
+                <div class="up-side old">
+                  <p class="up-cap"><span class="up-chip">Current design</span></p>
+                  <figure class="up-shot up-pg-shot old-shot"><a class="up-zoom" href={`/compare/old-${p.id}.webp`} target="_blank" rel="noopener" aria-label={`Open the current ${p.from} screen full size`}></a><img src={`/compare/old-${p.id}.webp`} alt={`The current ${p.from} page`} width="1280" height="766" /></figure>
+                  <ul class="up-feat">{p.old.map((f) => <li>{f}</li>)}</ul>
+                </div>
+                <div class="up-side new">
+                  <p class="up-cap"><span class="up-chip on">New layout</span></p>
+                  <figure class="up-shot up-pg-shot"><a class="up-zoom" href={`/compare/${p.img}.webp`} target="_blank" rel="noopener" aria-label={`Open the new ${p.to} screen full size`}></a><img src={`/compare/${p.img}.webp`} alt={p.alt} width="1280" height="800" />{p.img2 && <img class="up-inset" src={`/compare/${p.img2}.webp`} alt={p.alt2} width="1280" height="800" />}</figure>
+                  <ul class="up-feat">{p.now.map((f) => <li>{f}</li>)}</ul>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section class="up-sec" aria-labelledby="major">
+        <h2 id="major">Six major upgrades</h2>
+        <p class="up-lede">What the owner can do now that the current dashboard cannot.</p>
+        {upgrades.map((u, i) => (
+          <article class={`up-row ${i % 2 ? 'flip' : ''}`}>
+            <div class="up-text">
+              <h3>{u.title}</h3>
+              <p class="up-then"><span class="up-chip">Before</span>{u.before}</p>
+              <p class="up-now"><span class="up-chip on">Now</span>{u.now}</p>
+            </div>
+            <figure class={`up-shot ${u.narrow ? 'up-narrow' : ''}`}><img src={`/compare/${u.img}.webp`} alt={u.alt} width={u.narrow ? 760 : 1280} height={u.narrow ? 1120 : 800} /></figure>
+          </article>
+        ))}
+      </section>
+
+      <section class="up-sec" aria-labelledby="flows">
+        <h2 id="flows">Smoother workflows</h2>
+        <p class="up-lede">The same jobs, step by step. Before is from our walkthrough of the current app; Now is what the new prototype does.</p>
+        <div class="up-flows">
+          {flows.map((f) => (
+            <div class="up-flow">
+              <h3>{f.title}</h3>
+              <div class="up-cols">
+                <div class="up-col">
+                  <p class="up-chip">Before · {f.before.length} steps</p>
+                  <ol>{f.before.map((s) => <li>{s}</li>)}</ol>
+                </div>
+                <div class="up-col now">
+                  <p class="up-chip on">Now · {f.now.length} steps</p>
+                  <ol>{f.now.map((s) => <li>{s}</li>)}</ol>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="up-sec up-phone" aria-labelledby="phone">
+        <div class="up-text">
+          <h2 id="phone">Made for the front desk’s phone</h2>
+          <p>The current app has no phone layout. The new one reflows: lists come first, the money is one line, and the five things a desk does all day sit in a tab bar.</p>
+        </div>
+        <figure class="up-shot up-shot-phone"><img src="/compare/home-phone.webp" alt="New Home on a phone with the next-step button, lists and a tab bar" width="390" height="844" /></figure>
+      </section>
+
+      <section class="up-sec" aria-labelledby="extra">
+        <h2 id="extra">New, with no equivalent today</h2>
+        <dl class="up-extras">
+          {extras.map((e) => (<div><dt>{e[0]}</dt><dd>{e[1]}</dd></div>))}
+        </dl>
+      </section>
+
+      <section class="up-close">
+        <h2>See it working</h2>
+        <p>The prototype is clickable end to end. Sign in is a click-through.</p>
+        <a class="up-btn" href="/login"><span class="up-l">Open the live prototype</span><span class="up-s">Open prototype</span><span class="up-arrow" aria-hidden="true">→</span></a>
+        <p class="up-note">Prototype with fictitious salon data (Marlow &amp; Finch). “Before” facts come from the 10 Oct 2026 walkthrough of the current admin. “Now” describes the prototype’s design; connecting live booking, ad and phone data is the build.</p>
+      </section>
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  .up { background: var(--canvas); color: var(--ink); font-size: 1rem; line-height: 1.55; }
+  .up h1, .up h2, .up h3 { font-family: var(--font-display); letter-spacing: -0.02em; line-height: 1.1; }
+  .up-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 16px; padding: 12px max(16px, calc((100vw - 1160px) / 2)); background: color-mix(in srgb, var(--canvas) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .up-logo { display: inline-flex; align-items: center; gap: 10px; }
+  .up-logo img:first-child { height: 30px; width: auto; }
+  .up-logo img:last-child { height: 20px; width: auto; }
+  .up-tag { margin-left: auto; font-family: var(--mono); font-size: 0.75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+  .up-btn { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 18px; border-radius: var(--r-btn); background: var(--action); color: var(--ink); font-weight: 700; font-size: 0.9375rem; transition: background var(--dur) var(--ease); white-space: nowrap; }
+  .up-btn:hover { background: var(--action-deep); }
+  .up-arrow { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--ink); color: var(--action); font-size: 1rem; }
+  main { max-width: 1160px; margin: 0 auto; padding: 0 16px; }
+  .up-hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 48px; align-items: center; padding: 72px 0 56px; }
+  .up-hero h1 { font-size: clamp(2.25rem, 4.6vw, 3.75rem); font-weight: 700; text-wrap: balance; }
+  .up-hero p { margin-top: 20px; font-size: 1.125rem; color: var(--ink-2); max-width: 46ch; }
+  .up-facts { margin-top: 28px; display: grid; gap: 14px; padding: 0; list-style: none; }
+  .up-facts li { padding-left: 16px; border-left: 2px solid var(--teal); font-size: 0.9375rem; color: var(--ink-2); line-height: 1.45; }
+  .up-facts strong { display: block; color: var(--ink); font-weight: 700; }
+  .up-shot { margin: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 1px 2px rgb(6 42 45 / .06), 0 24px 48px -24px rgb(6 42 45 / .28); }
+  .up-shot img { width: 100%; height: auto; display: block; }
+  .up-sec { padding: 64px 0 8px; }
+  .up-sec h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 700; }
+  .up-lede { margin-top: 10px; color: var(--ink-3); font-size: 1.0625rem; max-width: 60ch; }
+  .up-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; margin-top: 56px; }
+  .up-row.flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .up-row.flip .up-text { order: 2; }
+  .up-text h3 { font-size: clamp(1.375rem, 2.2vw, 1.75rem); font-weight: 700; margin-bottom: 18px; text-wrap: balance; }
+  .up-text p { font-size: 0.96875rem; color: var(--ink-2); }
+  .up-text p + p { margin-top: 14px; }
+  .up-now { color: var(--ink) !important; }
+  .up-chip { display: inline-block; margin: 0 10px 0 0; padding: 1px 8px; border-radius: 6px; background: var(--off-wash); color: var(--ink-3); font-family: var(--mono); font-size: 0.6875rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 500; vertical-align: 1px; }
+  .up-chip.on { background: var(--violet-wash); color: var(--violet-deep); }
+  .up-flows { margin-top: 32px; border-top: 1px solid var(--line-strong); }
+  .up-flow { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); gap: 32px; padding: 28px 0; border-bottom: 1px solid var(--line); }
+  .up-flow h3 { font-size: 1.25rem; font-weight: 700; text-wrap: balance; }
+  .up-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+  .up-col .up-chip { margin-bottom: 10px; }
+  .up-narrow { max-width: 380px; justify-self: center; }
+  .up-col ol { list-style: decimal; margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 0.9375rem; color: var(--ink-3); }
+  .up-col.now ol { color: var(--ink); }
+  .up-col li::marker { font-family: var(--mono); font-size: 0.8125rem; }
+  .up-col.now li::marker { color: var(--violet); font-weight: 600; }
+  .up-phone { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 48px; align-items: center; }
+  .up-phone p { margin-top: 14px; color: var(--ink-2); font-size: 1.0625rem; max-width: 48ch; }
+  .up-shot-phone { max-width: 300px; justify-self: center; border-radius: 28px; }
+  .up-jump { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .up-jump a { padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); background: var(--surface); font-size: 0.8125rem; font-weight: 600; color: var(--ink-2); transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+  .up-jump a:hover { background: var(--violet-wash); border-color: var(--violet-soft); color: var(--ink); }
+  .up-pages { margin-top: 28px; display: grid; gap: 20px; }
+  .up-pg { scroll-margin-top: 76px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+  .up-pg-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+  .up-pg-head h3 { font-size: clamp(1.125rem, 1.8vw, 1.4375rem); font-weight: 700; text-wrap: balance; }
+  .up-to { margin: 0 10px; color: var(--teal); }
+  .up-verdict { flex: none; font-family: var(--mono); font-size: 0.6875rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 2px 9px; border-radius: 6px; background: var(--sunken); }
+  .up-pg-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+  .up-side { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .up-cap { margin: 0; }
+  .up-pg-shot { border-radius: 12px; box-shadow: none; aspect-ratio: 240 / 150; background: var(--sunken); border: 1px solid var(--line-strong); }
+  .up-pg-shot img { height: 100%; object-fit: cover; object-position: top left; }
+  .up-pg-shot { position: relative; }
+  .up-zoom { position: absolute; inset: 0; z-index: 1; cursor: zoom-in; }
+  .up-zoom:focus-visible { outline: 3px solid var(--teal); outline-offset: -3px; }
+  .up-inset { position: absolute !important; right: 8px; bottom: 8px; width: 46% !important; height: auto !important; border-radius: 8px; border: 1px solid var(--line-strong); box-shadow: 0 8px 20px -8px rgb(6 42 45 / .4); }
+  .up-feat { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 0.9rem; color: var(--ink-2); }
+  .up-feat li { position: relative; padding-left: 16px; line-height: 1.4; }
+  .up-feat li::before { content: ''; position: absolute; left: 0; top: 0.5em; width: 7px; height: 2px; background: var(--ink-4); }
+  .up-side.new .up-feat { color: var(--ink); }
+  .up-side.new .up-feat li::before { background: var(--teal); height: 3px; top: calc(0.5em - 0.5px); }
+  .up-extras { margin: 28px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; border-top: 1px solid var(--line-strong); }
+  .up-extras > div { padding: 16px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; }
+  .up-extras dt { font-weight: 700; }
+  .up-extras dd { margin: 0; color: var(--ink-2); font-size: 0.9375rem; }
+  .up-close { margin: 80px 0 0; padding: 56px 0 72px; border-top: 1px solid var(--line-strong); display: grid; justify-items: start; gap: 14px; }
+  .up-close h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 700; }
+  .up-close p { color: var(--ink-2); }
+  .up-note { margin-top: 14px; max-width: 70ch; font-size: 0.8125rem; color: var(--ink-3) !important; }
+  @media (max-width: 960px) {
+    .up-tag { display: none; } .up-top .up-btn { margin-left: auto; height: 40px; }
+    .up-hero, .up-row, .up-row.flip, .up-phone { grid-template-columns: 1fr; gap: 28px; }
+    .up-hero { padding: 40px 0 32px; }
+    .up-row.flip .up-text { order: 0; }
+    .up-row { margin-top: 40px; }
+    .up-flow { grid-template-columns: 1fr; gap: 16px; }
+    .up-cols { grid-template-columns: 1fr; gap: 20px; }
+    .up-pg { padding: 16px; } .up-pg-grid { grid-template-columns: 1fr; gap: 20px; }
+    .up-pg-head { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .up-extras { grid-template-columns: 1fr; }
+    .up-extras > div { grid-template-columns: 1fr; gap: 2px; }
+  }
+  .up-s { display: none; }
+  @media (max-width: 480px) { .up-top .up-l { display: none; } .up-top .up-s { display: inline; } .up-logo img:last-child { height: 18px; } }
+</style>

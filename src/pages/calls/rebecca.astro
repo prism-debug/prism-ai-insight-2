@@ -1,0 +1,202 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import Avatar from '../../components/Avatar.astro';
+import { SALON } from '../../data/salon.ts';
+import { CALL, CALL_AUDIO, CALL_LINES, STAGES, CALL_SMS, CALL_NEXT } from '../../data/demo-call.ts';
+import { money } from '../../lib/format.ts';
+
+// Demo 1: the call log for the call Joy answered from Rebecca. The audio, transcript and "What Joy did" share one
+// clock (src/scripts/call.ts), so pressing a stage or a line plays from there.
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const total = CALL_LINES[CALL_LINES.length - 1].end + 0.6;
+const stages = STAGES.map((s) => ({ ...s, start: CALL_LINES[s.from].start, end: CALL_LINES[s.to].end }));
+const stageOf = (i: number) => stages.find((s) => i >= s.from && i <= s.to)!.id;
+const outcome = [
+  { label: 'Booked', value: money(CALL.total), note: `${money(CALL.price)} service + ${money(CALL.addOnPrice)} add-on` },
+  { label: 'Appointment', value: `Fri ${CALL.time}`, note: `${CALL.when.replace('Friday, ', '')} with Olivia` },
+  { label: 'Upsell', value: `+${money(CALL.addOnPrice)}`, note: CALL.addOn },
+  { label: 'Your team’s time', value: '0 min', note: 'Joy handled it end to end' },
+];
+---
+<AppShell title={`Call from ${CALL.caller}`} active="inbox" crumbs={[{ label: `Call · ${CALL.caller}` }]} description="A call Joy answered: the recording, what she did, the booking and the follow-ups.">
+  <div class="call" data-call data-total={total}>
+    <header class="call-head" data-call-head>
+      <div class="call-who">
+        <Avatar name={CALL.caller} size="lg" />
+        <div>
+          <h1 class="t-title">{CALL.caller} called and booked</h1>
+          <p class="t-small muted"><Icon name="phone-incoming" size={13} /> Today {CALL.at} · {CALL.length} · {CALL.phone} · {CALL.guest}</p>
+          <p class="call-tags"><span class="tag joy"><img src="/brand/joy-mark.svg" alt="" width="11" height="11" />Answered by Joy</span><span class="tag good">Booked, held 24 h</span><span class="tag">Before opening</span></p>
+        </div>
+      </div>
+      <dl class="call-out">
+        {outcome.map((o) => (<div><dt>{o.label}</dt><dd class="tnum">{o.value}</dd><dd class="note">{o.note}</dd></div>))}
+      </dl>
+    </header>
+
+    <div class="call-grid">
+      <section class="call-rec" aria-labelledby="h-rec" data-call-player>
+        <header class="call-sh"><h2 class="t-head" id="h-rec">The call</h2><span class="t-meta">Recorded and transcribed by Joy</span></header>
+        <div class="player">
+          <button type="button" class="play" data-call-play aria-label="Play the call"><span class="i-play"><Icon name="play" size={18} /></span><span class="i-pause"><Icon name="pause" size={18} /></span></button>
+          <div class="track" data-call-track role="slider" tabindex="0" aria-label="Call position" aria-valuemin="0" aria-valuemax={Math.round(total)} aria-valuenow="0">
+            {stages.map((s) => <span class="seg" data-seg={s.id} style={`left:${(s.start / total) * 100}%;width:${((s.end - s.start) / total) * 100}%`} title={s.title}></span>)}
+            <span class="fill" data-call-fill></span>
+          </div>
+          <span class="time tnum"><span data-call-now>0:00</span> / {mmss(total)}</span>
+        </div>
+        <audio src={CALL_AUDIO} preload="metadata" data-call-audio></audio>
+        <ol class="lines" data-call-lines>
+          {CALL_LINES.map((l, i) => (
+            <li class={`line ${l.who}`} data-line={i} data-start={l.start} data-end={l.end} data-stage={stageOf(i)}>
+              <button type="button" class="line-at tnum" data-seek={l.start} aria-label={`Play from ${mmss(l.start)}`}>{mmss(l.start)}</button>
+              <div><span class="line-who">{l.who === 'joy' ? 'Joy' : CALL.first}</span><p>{l.text}</p></div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <aside class="call-side">
+        <section aria-labelledby="h-did">
+          <header class="call-sh"><h2 class="t-head" id="h-did">What Joy did</h2><span class="t-meta">Press a step to hear it</span></header>
+          <ol class="did">
+            {stages.map((s, i) => (
+              <li data-stage={s.id}>
+                <button type="button" data-seek={s.start}>
+                  <span class="did-n">{i + 1}</span>
+                  <span class="did-copy"><strong>{s.title}</strong><span>{s.detail}</span></span>
+                  <span class="did-at tnum">{mmss(s.start)}</span>
+                </button>
+              </li>
+            ))}
+            <li data-stage="follow"><a href="#follow"><span class="did-n">8</span><span class="did-copy"><strong>Followed up</strong><span>Text and email at {CALL.ended}, reminders scheduled.</span></span><span class="did-at">after</span></a></li>
+          </ol>
+        </section>
+
+        <section class="card booking" aria-labelledby="h-book" data-call-booking>
+          <header class="card-h"><h2 class="t-head" id="h-book">On the books</h2><span class="tag watch">Held until {CALL.holdUntil}</span></header>
+          <p class="bk-when"><Icon name="calendar-check" size={16} /><span><strong>{CALL.when}</strong> · {CALL.time} to {CALL.until}</span></p>
+          <p class="bk-who"><Avatar name={CALL.stylist.name} size="sm" /><span>{CALL.stylist.name}<small>{CALL.stylist.role}</small></span></p>
+          <dl class="bk-lines tnum">
+            <div><dt>{CALL.service}</dt><dd>from {money(CALL.price)}</dd></div>
+            <div><dt>{CALL.addOn}</dt><dd>{money(CALL.addOnPrice)}</dd></div>
+            <div class="sum"><dt>Estimate</dt><dd>{money(CALL.total)}</dd></div>
+          </dl>
+          <p class="t-small muted">Confirms itself when {CALL.first} adds her card. If she hasn’t by {CALL.holdUntil}, Joy texts once more, then frees the slot.</p>
+        </section>
+      </aside>
+    </div>
+
+    <section class="follow" id="follow" aria-labelledby="h-follow">
+      <header class="call-sh"><h2 class="t-head" id="h-follow">Follow-ups</h2><span class="t-meta">Sent by Joy at {CALL.ended}, two minutes after hanging up</span></header>
+      <div class="follow-grid">
+        <article class="card sms" data-call-sms aria-label="Text message">
+          <header class="card-h"><span class="t-head"><Icon name="message-square" size={14} /> Text to {CALL.phone}</span><span class="tag good">Delivered</span></header>
+          <div class="bubble">{CALL_SMS}</div>
+          <p class="t-meta">From {SALON.phone} · {CALL.ended}</p>
+        </article>
+        <article class="card mail" data-call-email aria-label="Email">
+          <header class="card-h"><span class="t-head"><Icon name="mail" size={14} /> Email to {CALL.email}</span><span class="tag good">Opened</span></header>
+          <div class="mail-body">
+            <p class="mail-subj">Your visit on Friday, {CALL.first}</p>
+            <p>Hi {CALL.first}, thank you for calling {SALON.name}. Here is your visit:</p>
+            <p class="mail-box"><strong>{CALL.service}</strong> with Olivia<br />+ {CALL.addOn}<br />{CALL.when} at {CALL.time} · estimate {money(CALL.total)}</p>
+            <p><span class="mail-btn">Complete your guest profile</span> We’ll hold your time for 24 hours.</p>
+            <p><strong>Finding us</strong><br />{CALL.address}</p>
+            <p><strong>Parking</strong><br />{CALL.parking}</p>
+            <p>It’s your first visit, so please arrive 10 minutes early and Olivia will talk through your colour with you.</p>
+            <p>See you Friday,<br />Joy, guest concierge at {SALON.name}</p>
+          </div>
+        </article>
+        <div class="card next">
+          <header class="card-h"><span class="t-head">Already scheduled</span></header>
+          <ol>{CALL_NEXT.map((n) => <li><span class="t-meta tnum">{n.when}</span><span>{n.what}</span></li>)}</ol>
+        </div>
+      </div>
+    </section>
+  </div>
+</AppShell>
+
+<script>import '../../scripts/call.ts';</script>
+
+<style>
+  .call { display: grid; gap: var(--s-6); padding-bottom: var(--s-8); }
+  .call-head { display: grid; gap: var(--s-5); }
+  .call-who { display: flex; gap: var(--s-4); align-items: flex-start; }
+  .call-who .t-small { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .call-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .call-tags .tag img { width: 11px; height: 11px; }
+  .call-out { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--r-lg); }
+  .call-out > div { padding: 12px 16px; border-left: 1px solid var(--line); min-width: 0; }
+  .call-out > div:first-child { border-left: 0; }
+  .call-out dt { font-size: var(--t-12); color: var(--ink-3); }
+  .call-out dd { font-size: var(--t-22); font-weight: 600; letter-spacing: -0.015em; margin-top: 2px; }
+  .call-out dd.note { font-size: var(--t-12); font-weight: 400; color: var(--ink-3); letter-spacing: 0; }
+
+  .call-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr); gap: var(--s-6); align-items: start; }
+  .call-sh { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: var(--s-3); }
+
+  .player { display: flex; align-items: center; gap: var(--s-3); padding: 10px 12px; border-radius: var(--r-lg); background: var(--ink); color: #fff; }
+  .play { width: 40px; height: 40px; border-radius: 50%; background: var(--action); color: var(--ink); display: grid; place-items: center; flex: none; }
+  .play .i-pause, .call.is-playing .play .i-play { display: none; }
+  .call.is-playing .play .i-pause { display: grid; }
+  .play span { display: grid; }
+  .track { position: relative; flex: 1; height: 28px; cursor: pointer; border-radius: 6px; background: rgb(255 255 255 / .08); overflow: hidden; }
+  .seg { position: absolute; top: 9px; bottom: 9px; border-radius: 3px; background: rgb(255 255 255 / .22); }
+  .seg.is-now { background: var(--d-mint); }
+  .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-right: 2px solid var(--action); background: rgb(255 154 74 / .14); pointer-events: none; }
+  .time { font-size: var(--t-13); opacity: .85; white-space: nowrap; }
+
+  .lines { list-style: none; margin: var(--s-3) 0 0; padding: 0 4px 0 0; display: grid; gap: 2px; max-height: 470px; overflow-y: auto; scroll-behavior: smooth; }
+  .line { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 8px 10px; border-radius: var(--r-md); transition: background var(--dur) var(--ease); }
+  .line-at { font-size: var(--t-12); color: var(--ink-3); text-align: left; padding-top: 2px; }
+  .line-at:hover { color: var(--ink); text-decoration: underline; }
+  .line-who { font-size: var(--t-12); font-weight: 700; }
+  .line.joy .line-who { color: var(--joy-ink); }
+  .line p { font-size: var(--t-14); line-height: 1.5; color: var(--ink-2); }
+  .line.is-now { background: var(--joy-wash); }
+  .line.rebecca.is-now { background: var(--hover); }
+  .line.is-now p { color: var(--ink); }
+
+  .call-side { display: grid; gap: var(--s-6); }
+  .did { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .did button, .did a { width: 100%; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 10px; border-radius: var(--r-md); text-align: left; color: var(--ink); }
+  .did button:hover, .did a:hover { background: var(--hover); }
+  .did-n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: var(--t-12); font-weight: 700; background: var(--cream); color: var(--ink-2); }
+  .did-copy { display: grid; gap: 1px; min-width: 0; }
+  .did-copy strong { font-size: var(--t-14); font-weight: 600; }
+  .did-copy span { font-size: var(--t-13); color: var(--ink-3); line-height: 1.4; }
+  .did-at { font-size: var(--t-12); color: var(--ink-3); padding-top: 2px; }
+  .did li.is-done .did-n { background: var(--good-wash); color: var(--good); }
+  .did li.is-now button { background: var(--joy-wash); }
+  .did li.is-now .did-n { background: var(--action); color: var(--ink); }
+
+  .card { border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-4); display: grid; gap: var(--s-3); align-content: start; background: var(--surface); }
+  .card-h { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; }
+  .card-h .t-head { display: inline-flex; align-items: center; gap: 6px; }
+  .bk-when, .bk-who { display: flex; align-items: center; gap: 10px; font-size: var(--t-14); }
+  .bk-who span { display: grid; } .bk-who small { color: var(--ink-3); font-size: var(--t-12); }
+  .bk-lines { display: grid; gap: 4px; padding-top: var(--s-2); border-top: 1px solid var(--line); font-size: var(--t-14); }
+  .bk-lines div { display: flex; justify-content: space-between; gap: var(--s-3); }
+  .bk-lines dt { color: var(--ink-2); } .bk-lines .sum { font-weight: 700; padding-top: 4px; border-top: 1px dashed var(--line-strong); margin-top: 2px; }
+
+  .follow-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr) minmax(0, 0.85fr); gap: var(--s-4); align-items: start; }
+  .bubble { padding: 10px 14px; border-radius: 18px 18px 18px 6px; background: var(--hover); font-size: var(--t-14); line-height: 1.5; color: var(--ink); }
+  .mail-body { display: grid; gap: 10px; font-size: var(--t-14); line-height: 1.5; color: var(--ink-2); }
+  .mail-subj { font-weight: 700; color: var(--ink); font-size: var(--t-16); }
+  .mail-box { padding: 10px 12px; border-radius: var(--r-md); background: var(--cream); color: var(--ink); }
+  .mail-btn { display: inline-block; padding: 6px 12px; margin-right: 6px; border-radius: var(--r-btn); background: var(--ink); color: #fff; font-weight: 600; font-size: var(--t-13); }
+  .next ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .next li { display: grid; gap: 2px; font-size: var(--t-14); }
+
+  @media (max-width: 1100px) { .follow-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .mail { grid-row: span 2; } }
+  @media (max-width: 900px) {
+    .call-grid, .follow-grid { grid-template-columns: minmax(0, 1fr); }
+    .call-out { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .call-out > div:nth-child(3) { border-left: 0; }
+    .call-out > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+    .call-out dd { font-size: var(--t-18); }
+    .lines { max-height: 360px; }
+  }
+</style>

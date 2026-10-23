@@ -1,0 +1,17 @@
+---
+import Icon from '../Icon.astro';
+import type { Lead } from '../../data/types.ts';
+import { service, source } from '../../data/salon.ts';
+import { money } from '../../lib/format.ts';
+import { waitShort, channelIcon, isUrgent, waitMs, nextStep } from '../../data/leads.ts';
+interface Props { lead: Lead }
+const { lead: l } = Astro.props;
+const late = isUrgent(l);
+---
+<article class="bcard" draggable="true" data-card data-id={l.id} tabindex="0" aria-label={`${l.name}, ${service(l.serviceId).name}`}>
+  <div class="bc-top"><a class="name truncate" href={`/leads/${l.id}`}>{l.name}</a><button class="icon-btn" data-menu="menu-move" data-card-menu aria-label={`Move ${l.name}`} aria-haspopup="menu"><Icon name="ellipsis" size={15} /></button></div>
+  <div class="sub truncate">{service(l.serviceId).name} · <span class="tnum">{money(l.likelyValue)}</span></div>
+  <div class="bc-src muted t-small"><Icon name={channelIcon(l.channel)} size={12} /><span class="truncate">{source(l.sourceId).name}</span></div>
+  <div class="bc-next t-small truncate">{nextStep(l)}</div>
+  <div class={`bc-wait t-small tnum ${late ? 'late strong' : 'muted'}`} data-wait>{waitShort(waitMs(l))}</div>
+</article>

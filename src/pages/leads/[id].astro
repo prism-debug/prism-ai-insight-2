@@ -1,0 +1,324 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import Avatar from '../../components/Avatar.astro';
+import StatusIcon from '../../components/StatusIcon.astro';
+import TimelineItem from '../../components/leads/TimelineItem.astro';
+import { NOW } from '../../data/clock.ts';
+import { SALON, SERVICES, SOURCES, service, source, campaign, stylist } from '../../data/salon.ts';
+import { client } from '../../data/seed.ts';
+import { ROWS as THREADS } from '../../data/inbox.ts';
+import { DETAIL_LEADS, LIST_ORDER, NEEDS_ORDER, isWaiting, waitShort, QUIET, STATUS_ORDER, STATUS_LABEL, OWNERS, ownerName, channelIcon, channelName, timeline, dayLabel, summary, suggestedReply, templates, scoreFactors, tier, duplicateOf, tagChoices, relatedAppts, lastTouch, isLate, joyHoldsDraft, handler, relStamp, quietLine } from '../../data/leads.ts';
+import { money, dur, first, clock, dayShort, dateShort } from '../../lib/format.ts';
+
+// The pager walks the list you came from: waiting leads walk the "Needs you first" list, everyone else the full list.
+export function getStaticPaths() {
+  return DETAIL_LEADS.map((lead) => {
+    const list = isWaiting(lead) ? NEEDS_ORDER : LIST_ORDER; const i = list.findIndex((x) => x.id === lead.id);
+    return { params: { id: lead.id }, props: { lead, prev: i > 0 ? list[i - 1].id : undefined, next: i >= 0 ? list[i + 1]?.id : undefined, pos: i >= 0 ? i + 1 : 0, total: i >= 0 ? list.length : 0, listLabel: isWaiting(lead) ? 'Needs you first' : 'All leads' } };
+  });
+}
+const { lead: l, prev, next, pos, total, listLabel } = Astro.props;
+const f = first(l.name); const svc = service(l.serviceId); const camp = l.campaignId ? campaign(l.campaignId) : undefined;
+const ev = timeline(l); const sug = suggestedReply(l); const tpl = templates(l); const factors = scoreFactors(l); const dupe = duplicateOf(l);
+const appts = relatedAppts(l); const cl = l.clientId ? client(l.clientId) : undefined;
+const meter = l.score >= 70 ? 'var(--d-teal)' : l.score >= 40 ? 'var(--d-mint)' : 'var(--d-orange)';
+const joyDraft = joyHoldsDraft(ev); const hd = handler(l.status, l.ownerId);
+const firstAsk = ev.find((e) => e.actorKind === 'guest')?.at ?? l.firstTouchAt;
+const hasThread = THREADS.some((t) => t.id === l.id);
+const telHref = `tel:+1${l.phone.replace(/\D/g, '').slice(-10)}`;
+const waitingTxt = waitShort(NOW - l.lastInboundAt);
+const rec = {
+  id: l.id, name: l.name, first: f, status: l.status, owner: l.ownerId, sms: l.consentSms, promo: l.consentMarketing, tags: l.tags, service: l.serviceId,
+  nowLabel: clock(NOW), phone: SALON.phone, statusLabel: STATUS_LABEL, owners: Object.fromEntries(OWNERS.map((o) => [o.id, o.name])),
+  services: Object.fromEntries(SERVICES.map((s) => [s.id, { name: s.name, price: s.price, from: !!s.fromPrice }])), sources: Object.fromEntries(SOURCES.map((s) => [s.id, s.name])),
+  quiet: QUIET, handoff: l.handoffReason ?? '', draft: joyDraft, phoneLead: l.phone, waiting: waitingTxt,
+};
+let lastDay = '';
+const jdn = (t: number) => dayLabel(t);
+---
+<AppShell title={l.name} active="leads" crumbs={[{ label: l.name }]} flush description={summary(l)}>
+  <div slot="actions" class="rec-nav">
+    {prev ? <a class="icon-btn" id="rec-prev" href={`/leads/${prev}`} aria-label="Previous lead"><Icon name="chevron-up" size={16} /></a> : <span class="icon-btn" aria-disabled="true" style="opacity:.35"><Icon name="chevron-up" size={16} /></span>}
+    {next ? <a class="icon-btn" id="rec-next" href={`/leads/${next}`} aria-label="Next lead"><Icon name="chevron-down" size={16} /></a> : <span class="icon-btn" aria-disabled="true" style="opacity:.35"><Icon name="chevron-down" size={16} /></span>}
+    {pos > 0 && <span class="t-meta tnum hide-m" id="rec-pos" title={listLabel}>{pos} of {total}</span>}
+  </div>
+
+  <div class="split rec" id="lead-record">
+    <div class="primary rec-main">
+      <header class="rec-head">
+        <Avatar name={l.name} size="xl" />
+        <div class="rec-title">
+          <h1 class="t-title">{l.name}</h1>
+          <p class="rec-state t-small"><span id="head-state"><StatusIcon state={l.status} /></span><span id="head-status" class="strong">{STATUS_LABEL[l.status]}</span><span class="muted">· {channelName(l.channel)} · asked {relStamp(firstAsk)}</span></p>
+          <p class="rec-sum t-body muted hide-m">{summary(l)}</p>
+        </div>
+        <div class="rec-act-col">
+        <div class="rec-actions">
+          <a class="btn btn-primary" href={`/bookings?lead=${l.id}`}><Icon name="calendar-plus" size={15} /><span><span class="hide-m">Book appointment</span><span class="only-m">Book visit</span></span></a>
+          <a class="btn" id="btn-call" href={telHref}><Icon name="phone" size={15} />Call</a>
+          <button class="btn" id="btn-text"><Icon name="message-square" size={15} /><span>Text<span class="hide-m"> {f}</span></span></button>
+        </div>
+          <p class="t-small muted rec-quiet" id="quiet-line">{quietLine()}</p>
+        </div>
+      </header>
+
+      <div class="banner" id="banner-handoff" hidden={l.status !== 'needs_person'}>
+        <StatusIcon state="needs_person" size={16} />
+        <div class="b-main"><p class="strong">Joy handed this to you and paused</p><p class="t-small muted">Reason: <span id="handoff-reason">{l.handoffReason ?? 'A person is replying'}</span></p></div>
+        <button class="btn btn-sm" id="btn-handback"><Icon name="sparkles" size={13} />Hand back to Joy</button>
+      </div>
+      <div class="banner" id="banner-wait" hidden={l.status !== 'not_answered'}>
+        <StatusIcon state="not_answered" size={16} />
+        <div class="b-main"><p class="strong">Nobody has replied. Waiting <span class={isLate(l) ? 'late' : ''}>{waitingTxt}</span>.</p><p class="t-small muted hide-m">{l.consentSms ? 'The first reply is what wins the booking. Reply yourself, or let Joy take it.' : `${f} has not agreed to texts yet. Call or email, then record consent here.`}</p></div>
+        <button class="btn btn-sm" id="btn-letjoy"><Icon name="sparkles" size={13} />Let Joy reply</button>
+      </div>
+
+      <section aria-label="Timeline" class="tl-wrap">
+        <ol class="timeline" id="timeline">
+          {ev.map((e) => { const d = jdn(e.at); const sep = d !== lastDay; lastDay = d; return (<>{sep && <li class="tl-day"><span>{d}</span></li>}<TimelineItem ev={e} /></>); })}
+        </ol>
+      </section>
+
+      <section class="composer" id="composer" aria-label="Reply to lead" data-open="false">
+        <button type="button" class="c-bar" id="c-bar" aria-expanded="false" aria-controls="c-body"><Icon name="message-square" size={16} /><span class="strong">Text {f}</span><span class="muted t-small" id="c-bar-sub">{l.consentSms ? (joyDraft ? '· Joy has a draft' : '· consent on file') : '· no text consent'}</span><Icon name="chevron-up" size={16} class="chev" /></button>
+        <div class="c-body" id="c-body">
+        <div class="tabs c-tabs" role="tablist" aria-label="Composer">
+          <button class="tab" role="tab" id="ct-text" data-ctab="text" aria-selected="true"><Icon name="message-square" size={14} />Text</button>
+          <button class="tab" role="tab" data-ctab="note" aria-selected="false"><Icon name="notebook-pen" size={14} />Note</button>
+          <button class="tab" role="tab" data-ctab="log" aria-selected="false"><Icon name="clipboard-pen" size={14} />Log</button>
+        </div>
+        <div data-cpanel="text">
+          <div class={`dash-sug ${joyDraft ? 'is-joy' : ''}`}>
+            {joyDraft ? <Avatar kind="joy" size="sm" /> : <Avatar kind="dash" size="sm" />}
+            <p class="t-small"><span class="strong">{joyDraft ? 'Joy’s draft (not sent)' : 'Dash suggests'}</span> <span class="muted">· {sug.why}</span><br /><span id="sug-text">{sug.text}</span></p>
+            <button class={`btn btn-sm ${joyDraft ? '' : 'btn-dash'}`} id="use-sug">{joyDraft ? 'Use draft' : 'Use reply'}</button>
+          </div>
+          <div class="tpl">{tpl.map((t) => <button class="chip" data-tpl={t.text}>{t.label}</button>)}</div>
+          <textarea class="textarea" id="msg" rows="3" placeholder={`Text ${f}`} aria-label={`Message to ${f}`}></textarea>
+          <div class="c-foot">
+            <p class="t-small muted c-meta"><span id="consent-line"></span><span class="c-count"><br /><span class="tnum" id="msg-count">0/160</span> · sends from your salon’s number {SALON.phone}</span></p>
+            <button class="btn btn-primary" id="btn-send" disabled>Send text</button>
+          </div>
+        </div>
+        <div data-cpanel="note" hidden>
+          <textarea class="textarea" id="note" rows="3" placeholder="Add a note for your team. Only staff see this." aria-label="Note"></textarea>
+          <div class="c-foot"><p class="t-small muted c-meta">Visible to your team, never to {f}.</p><button class="btn btn-primary" id="btn-note" disabled>Add note</button></div>
+        </div>
+        <div data-cpanel="log" hidden>
+          <div class="tpl" role="radiogroup" aria-label="What you did">
+            {[['texted', 'Texted', 'message-square'], ['called', 'Called', 'phone'], ['emailed', 'Emailed', 'mail'], ['sent a DM to', 'Sent a DM', 'camera'], ['saw in person', 'Walked in', 'footprints']].map(([v, t, ic], i) => <button class="chip" role="radio" data-logtype={v} data-lt={t} aria-checked={i === 1 ? 'true' : 'false'} aria-pressed={i === 1 ? 'true' : 'false'}><Icon name={ic} size={13} />{t}</button>)}
+          </div>
+          <input class="input" id="log-detail" placeholder="What happened? (optional)" aria-label="Details" />
+          <div class="c-foot"><p class="t-small muted c-meta">Use this when you reached out outside PRISM. Nothing is sent.</p><button class="btn btn-primary" id="btn-log">Log it</button></div>
+        </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="aside rec-aside" id="rec-aside" data-open="false" aria-label="Properties">
+      <button class="props-toggle" id="props-toggle" aria-expanded="false" aria-controls="aside-body"><span class="strong">Properties</span><span class="muted t-small truncate">{STATUS_LABEL[l.status]} · {hd.name} · {source(l.sourceId).name}</span><Icon name="chevron-down" size={15} class="chev" /></button>
+      <div class="aside-body" id="aside-body">
+        <h2 class="props-title">Properties</h2>
+        <dl>
+          <div class="prop editable" role="button" tabindex="0" data-menu="menu-status" aria-haspopup="menu"><dt>Status</dt><dd><span data-ic="status"><StatusIcon state={l.status} /></span><span data-val="status">{STATUS_LABEL[l.status]}</span></dd></div>
+          <div class="prop editable" role="button" tabindex="0" data-menu="menu-owner" aria-haspopup="menu"><dt>Handler</dt><dd><span data-val="owner">{l.ownerId && hd.kind === 'person' ? ownerName(l.ownerId) : hd.name}</span></dd></div>
+          <div class="prop joyrow"><dt>Joy</dt><dd><label class="joy-toggle"><input class="switch" type="checkbox" id="joy-switch" aria-label="Joy is handling this lead" disabled={l.status === 'booked'} checked={l.status === 'joy_handling'} /><span id="joy-label" class="t-small"></span></label></dd></div>
+          <div class="prop editable" role="button" tabindex="0" data-menu="menu-source" aria-haspopup="menu"><dt>First touch</dt><dd class="col"><span data-val="source">{source(l.sourceId).name}{camp ? ` · ${camp.name}` : ''}</span><span class="t-small muted">{dayShort(l.firstTouchAt)}</span></dd></div>
+          <div class="prop"><dt>Latest touch</dt><dd class="col"><span class="inl inl-wrap"><Icon name={channelIcon(l.channel)} size={13} /><span>{lastTouch(l)}</span></span><span class="t-small muted">{l.touches} {l.touches === 1 ? 'touch' : 'touches'} in all</span></dd></div>
+          <div class="prop editable" role="button" tabindex="0" data-menu="menu-service" aria-haspopup="menu"><dt>Service</dt><dd class="col"><span data-val="service">{svc.name}</span><span class="t-small muted" data-val="price">{svc.fromPrice ? 'from ' : ''}{money(svc.price)} in Brand Hub · {Math.round(svc.minutes / 6) / 10} h</span></dd></div>
+          <div class="prop"><dt>Likely value</dt><dd class="strong tnum" data-val="value">{money(l.likelyValue)}</dd></div>
+          <div class="prop"><dt>Contact</dt><dd class="col"><span class="tnum">{l.phone}</span>{l.ig && <span class="t-small muted">{l.ig}</span>}{l.email && l.email.includes(l.name.split(' ')[1].toLowerCase()) && <span class="t-small muted truncate">{l.email}</span>}</dd></div>
+        </dl>
+
+        <dl class="score-dl">
+          <div class="prop"><dt>Score</dt><dd><span class="strong tnum">{l.score} · {tier(l.score)}</span><span class="m4" tabindex="0" data-tip={`Lead score|Score~${l.score} out of 100|${tier(l.score)}`} role="img" aria-label={`Score ${l.score} out of 100`}><i style={`width:${l.score}%;background:${meter}`}></i></span></dd></div>
+        </dl>
+        <details class="why-d">
+          <summary>Why this score</summary>
+          <ul class="why">
+            {factors.map((x) => <li><span>{x.label}</span><span class={`tnum strong ${x.pts === 0 ? 'muted' : ''}`}>{x.pts > 0 ? '+' : x.pts < 0 ? '−' : ''}{Math.abs(x.pts)}</span></li>)}
+          </ul>
+        </details>
+
+        <dl>
+          <div class="prop"><dt>Consent</dt><dd class="consent-view" id="consent-view" title="Consent on file">
+            <span class="cv" data-cv="sms"></span><span class="cv" data-cv="promo"></span>
+            <button type="button" class="link-btn t-small" id="consent-edit" aria-expanded="false" aria-controls="consent-box">Edit</button>
+          </dd></div>
+        </dl>
+        <div class="consent-box" id="consent-box" hidden>
+          <label class="prop"><span class="t-small">Appointment texts</span><input class="switch" type="checkbox" id="c-sms" checked={l.consentSms} aria-label="Appointment texts allowed" /></label>
+          <label class="prop"><span class="t-small">Promotional texts</span><input class="switch" type="checkbox" id="c-promo" checked={l.consentMarketing} aria-label="Promotional texts allowed" /></label>
+        </div>
+        <span hidden id="consent-ics"><span data-cic="yes"><Icon name="circle-check" size={14} /></span><span data-cic="no"><Icon name="circle-x" size={14} /></span></span>
+
+        <h2 class="props-title">Tags</h2>
+        <div class="tags" id="tags">
+          {l.tags.map((t) => <span class="tag" data-tag={t}>{t}<button aria-label={`Remove ${t}`} data-untag={t}><Icon name="x" size={10} /></button></span>)}
+          <button class="chip" data-menu="menu-tag" aria-haspopup="menu"><Icon name="plus" size={12} />Tag</button>
+        </div>
+
+        {dupe && (
+          <div id="dupe">
+            <h2 class="props-title">Possible duplicate</h2>
+            <p class="t-small"><a class="strong" href={dupe.href}>{dupe.name}</a> <span class="muted">· {dupe.why}</span></p>
+            <div class="dupe-btns"><button class="btn btn-sm" id="dupe-merge"><Icon name="merge" size={13} />Merge</button><button class="btn btn-sm btn-quiet" id="dupe-no">Not the same person</button></div>
+          </div>
+        )}
+
+        <h2 class="props-title">Related</h2>
+        <ul class="related">
+          {appts.map((a) => <li><Icon name="calendar-check" size={14} /><a href="/bookings"><span class="strong">{service(a.serviceId).name}</span> · {dayShort(a.start)} {clock(a.start)}</a><span class="muted t-small">{stylist(a.stylistId).name.split(' ')[0]}</span></li>)}
+          {!appts.length && <li class="muted"><Icon name="calendar" size={14} />No appointment yet. <a class="link-v" href={`/bookings?lead=${l.id}`}>Book one</a></li>}
+          {cl && <li><Icon name="heart" size={14} /><a href={`/clients/${cl.id}`}><span class="strong">Client record</span> · {cl.visits.length} {cl.visits.length === 1 ? 'visit' : 'visits'}</a></li>}
+          {hasThread && <li><Icon name="inbox" size={14} /><a href={`/inbox?t=${l.id}`}>Open in Inbox</a><span class="muted t-small">{channelName(l.channel)}</span></li>}
+          {dupe && <li><Icon name="message-circle" size={14} /><a href={dupe.href}>Other thread: {dupe.name}</a></li>}
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <div class="menu" id="menu-status" role="menu"><div class="menu-head">Status</div>{STATUS_ORDER.map((s) => <button class="menu-item" data-set="status" data-value={s}><StatusIcon state={s} />{STATUS_LABEL[s]}</button>)}</div>
+  <div class="menu" id="menu-owner" role="menu"><div class="menu-head">Handler</div>{OWNERS.map((o) => <button class="menu-item" data-set="owner" data-value={o.id}>{o.id === 'joy' ? <Avatar kind="joy" size="sm" /> : <Avatar name={o.name} size="sm" />}{o.name}</button>)}<button class="menu-item" data-set="owner" data-value="none">Unassigned</button></div>
+  <div class="menu" id="menu-service" role="menu"><div class="menu-head">Service (prices from Brand Hub)</div>{SERVICES.map((s) => <button class="menu-item" data-set="service" data-value={s.id}>{s.name}<span class="muted t-small" style="margin-left:auto">{s.fromPrice ? 'from ' : ''}{money(s.price)}</span></button>)}</div>
+  <div class="menu" id="menu-source" role="menu"><div class="menu-head">First touch source</div>{SOURCES.map((s) => <button class="menu-item" data-set="source" data-value={s.id}>{s.name}</button>)}</div>
+  <div class="menu" id="menu-tag" role="menu"><div class="menu-head">Add a tag</div>{tagChoices.map((t) => <button class="menu-item" data-addtag={t}>{t}</button>)}</div>
+
+  <script type="application/json" id="rec-data" set:html={JSON.stringify(rec)}></script>
+  <script>import '../../scripts/lead-record.ts';</script>
+</AppShell>
+
+<style is:global>
+  .rec { align-items: start; }
+  .rec-nav { display: flex; align-items: center; gap: 2px; }
+  .rec-main { padding: var(--s-5) var(--s-6) var(--s-8); display: grid; gap: var(--s-5); align-content: start; }
+  .rec-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s-4); align-items: start; }
+  .rec-title { display: grid; gap: 4px; min-width: 0; }
+  .rec-state { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .rec-sum { max-width: 62ch; }
+  .rec-act-col { display: grid; gap: var(--s-1); justify-items: end; }
+  .rec-actions { display: flex; gap: var(--s-2); }
+  .rec-quiet { margin: 0; white-space: nowrap; }
+  .inl-wrap { align-items: flex-start; } .inl-wrap svg { margin-top: 3px; } .inl-wrap > span { white-space: normal; overflow-wrap: anywhere; }
+  .banner { display: flex; align-items: center; gap: var(--s-3); padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .banner .state-icon { width: 16px; height: 16px; }
+  .b-main { flex: 1; min-width: 0; }
+  .late { color: var(--attn); }
+  .timeline { display: grid; gap: 0; }
+  .tl-day { display: flex; align-items: center; gap: var(--s-3); margin: var(--s-3) 0 var(--s-2); font-size: var(--t-12); font-weight: 600; color: var(--ink-3); }
+  .tl-day::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .tl { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--s-3); padding: 7px 0; position: relative; }
+  .tl-ic { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--off-wash); color: var(--ink-3); z-index: 1; }
+  .tl::before { content: ""; position: absolute; left: 11.5px; top: 0; bottom: 0; width: 1px; background: var(--line); }
+  .tl-day + .tl::before { top: 12px; }
+  .tl-ic .avatar { width: 24px; height: 24px; }
+  .tl-in .tl-ic { background: var(--violet-wash); color: var(--violet-deep); }
+  .tl-handoff-wrap, .tl-handoff { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; font-size: var(--t-13); }
+  .tl-handoff .tag { flex: none; }
+  .tl-main { min-width: 0; display: grid; gap: 3px; }
+  .tl-head { display: flex; gap: 4px; font-size: var(--t-12); align-items: baseline; }
+  .tl-time { margin-left: auto; }
+  .bubble { padding: 8px 12px; border-radius: 4px 14px 14px 14px; background: var(--sunken); border: 1px solid var(--line); max-width: 62ch; font-size: var(--t-13); width: fit-content; }
+  .tl-out .bubble, .tl-text { max-width: 62ch; font-size: var(--t-13); }
+  .tl-out.by-joy .bubble { background: var(--joy-wash); border-color: transparent; border-radius: 14px 4px 14px 14px; }
+  .tl-out.by-team .bubble { background: var(--violet-wash); border-color: transparent; border-radius: 14px 4px 14px 14px; }
+  .tl-note .tl-text { padding: 8px 12px; background: var(--watch-wash); border-radius: var(--r-md); color: var(--ink); width: fit-content; }
+  .tl-why { display: flex; align-items: flex-start; gap: 5px; color: var(--joy-ink); max-width: 62ch; line-height: 1.4; }
+  .tl-why svg { margin-top: 2px; }
+  .tl-system.by-joy .tl-text { font-weight: 500; }
+  .tl { padding: 6px 0; }
+  .tl-why svg { flex: none; }
+  @media (min-width: 901px) { .composer { position: static !important; } }
+  .composer { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line-strong); padding-top: var(--s-3); display: grid; gap: var(--s-3); z-index: 5; }
+  .composer [data-cpanel] { display: grid; gap: var(--s-3); }
+  .c-body { display: grid; gap: var(--s-3); }
+  .c-bar { display: none; }
+  .dash-sug.is-joy p .strong { color: var(--joy-ink); }
+  .m4 { display: block; width: 36px; height: 4px; border-radius: 4px; background: var(--off-wash); overflow: hidden; }
+  .m4 i { display: block; height: 100%; border-radius: 4px; }
+  .c-tabs { gap: 2px; }
+  .c-tabs .tab svg { width: 14px; height: 14px; }
+  .dash-sug { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s-3); align-items: start; padding: 8px 0; }
+  .tpl { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+  .c-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--s-4); }
+  .c-meta { line-height: 1.6; }
+  .chip[role="radio"][aria-checked="true"] { border-style: solid; border-color: var(--violet-soft); background: var(--violet-wash); color: var(--violet-deep); }
+  /* aside */
+  .rec-aside { position: sticky; top: 52px; max-height: calc(100dvh - 60px); overflow-y: auto; }
+  .props-toggle { display: none; }
+  .rec-aside .prop { grid-template-columns: 92px minmax(0, 1fr); align-items: start; padding-top: 6px; padding-bottom: 6px; }
+  .rec-aside .prop dd.col { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .rec-aside .prop dt { padding-top: 1px; }
+  .rec-aside .prop dd { gap: 6px; }
+  .prop.joyrow { align-items: center; } .joy-toggle { display: flex; align-items: center; gap: var(--s-2); cursor: pointer; }
+  .inl { display: inline-flex; align-items: center; gap: 6px; min-width: 0; } .inl svg { flex: none; color: var(--ink-3); }
+  .consent-view { flex-wrap: wrap; gap: 4px 10px !important; } .cv { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; white-space: nowrap; color: var(--ink-2); } .cv svg { color: var(--ink-3); flex: none; }
+  .link-btn { color: var(--ink-3); text-decoration: underline; text-underline-offset: 2px; font-weight: 400; } .link-btn:hover { color: var(--ink); }
+  .consent-box[hidden] { display: none; }
+  .consent-box { display: grid; gap: 2px; padding: 2px 0 var(--s-2); } .consent-box .prop { grid-template-columns: minmax(0, 1fr) auto; }
+  .why-d { margin: 0 0 var(--s-2); } .why-d summary { cursor: pointer; font-size: var(--t-12); color: var(--ink-3); padding: 4px 0; list-style: none; display: inline-flex; align-items: center; gap: 4px; } .why-d summary::-webkit-details-marker { display: none; } .why-d summary::before { content: ''; width: 5px; height: 5px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform var(--dur) var(--ease); } .why-d[open] summary::before { transform: rotate(45deg); } .why-d summary:hover { color: var(--ink); }
+  .score { display: flex; align-items: center; gap: var(--s-3); margin: var(--s-2) 0; }
+  .score-n { font-size: var(--t-22); font-weight: 600; letter-spacing: -.02em; width: 34px; }
+  .m4.wide { flex: 1; width: auto; }
+  .why { display: grid; margin-top: var(--s-1); }
+  .why li { display: flex; justify-content: space-between; gap: var(--s-3); padding: 6px 0; border-bottom: 1px solid var(--line); font-size: var(--t-12); color: var(--ink-2); }
+  .why li:last-child { border-bottom: 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag button { display: inline-grid; place-items: center; color: inherit; opacity: .7; width: 14px; height: 14px; }
+  .tag button:hover { opacity: 1; }
+  .dupe-btns { display: flex; gap: var(--s-2); margin-top: var(--s-2); }
+  .related { display: grid; gap: 2px; font-size: var(--t-13); }
+  .related li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: var(--s-2); align-items: center; min-height: 28px; }
+  .related svg { color: var(--ink-3); } .related a:hover { color: var(--violet-deep); }
+  .link-v { color: var(--violet-deep); font-weight: 600; }
+  .rec-aside .m4 { width: 36px; }
+  @media (max-width: 960px) {
+    .rec { display: flex; flex-direction: column; align-items: stretch; }
+    .rec-main { display: contents; }
+    .rec-main > * { margin-left: var(--s-4); margin-right: var(--s-4); }
+    .rec-head { order: 0; margin-top: var(--s-4); }
+    .banner { order: 1; margin-top: var(--s-4); }
+    .split.rec > .rec-aside { order: 2; position: static; max-height: none; margin: 0; border-top: 0; border-left: 0; border-bottom: 1px solid var(--line); padding: 0 var(--s-4); }
+    .tl-wrap { order: 3; margin-top: var(--s-3); margin-bottom: var(--s-4); }
+    .composer { order: 4; }
+    .props-toggle { display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 48px; text-align: left; }
+    .props-toggle .truncate { flex: 1; min-width: 0; }
+    .props-toggle .chev { transition: transform var(--dur) var(--ease); }
+    .rec-aside[data-open="true"] .chev { transform: rotate(180deg); }
+    .rec-aside[data-open="false"] .aside-body { display: none; }
+    .rec-aside[data-open="true"] .aside-body { padding-bottom: var(--s-4); }
+    .rec-aside .props-title:first-child { display: none; }
+  }
+  @media (max-width: 900px) {
+    .rec-head { grid-template-columns: auto minmax(0, 1fr); gap: var(--s-3); margin-top: var(--s-3); }
+    .rec-head .avatar { --sz: 40px; }
+    .rec-title .t-title { font-size: var(--t-17, 17px); line-height: 1.25; }
+    .rec-quiet { display: none; }
+    .rec-act-col { grid-column: 1 / -1; justify-items: stretch; }
+    .rec-actions {} .rec-actions .btn { flex: 1; padding: 0 10px; } .rec-actions .ra-book { flex: 1.5; }
+    .banner { flex-wrap: nowrap; padding: 6px 0; gap: var(--s-2); margin-top: var(--s-3); }
+    .banner .b-main { flex: 1; min-width: 0; } .banner .btn { margin-left: 0; flex: none; }
+    .tl-wrap { margin-top: var(--s-2); }
+    .props-toggle { min-height: 44px; }
+    .composer { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom)); margin: 0; padding: 0; gap: 0; border-top: 1px solid var(--line-strong); box-shadow: 0 -6px 14px rgb(40 30 90 / .06); background: var(--surface); z-index: 20; }
+    .composer::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 10px; background: var(--surface); }
+    .c-bar { display: flex; align-items: center; gap: var(--s-2); width: 100%; height: 48px; padding: 0 var(--s-4); text-align: left; background: var(--surface); }
+    .c-bar svg:first-child { color: var(--violet-deep); flex: none; }
+    .c-bar .chev { margin-left: auto; transition: transform var(--dur) var(--ease); color: var(--ink-3); flex: none; }
+    .composer[data-open="true"] .c-bar .chev { transform: rotate(180deg); }
+    .c-bar .bad { color: var(--attn); }
+    .composer[data-open="false"] .c-body { display: none; }
+    .composer[data-open="true"] .c-body { padding: 0 var(--s-4) var(--s-3); max-height: min(62dvh, 460px); overflow-y: auto; }
+    .dash-sug { padding: 0; align-items: start; }
+    .c-count { display: none; }
+    .tpl { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .tpl .chip { flex: none; }
+    .composer .textarea { min-height: 52px; }
+    .c-meta { font-size: var(--t-11); }
+    .bubble, .tl-why { max-width: 100%; }
+    .rec .btn, .rec .btn-sm, .rec .chip, .rec .icon-btn, .rec-nav .icon-btn { min-height: 44px; }
+    .rec .btn-sm { padding: 0 14px; }
+    .rec .tag button { min-height: 0; }
+    .rec .rec-aside .chip { min-height: 44px; }
+  }
+</style>

@@ -1,0 +1,30 @@
+---
+import Icon from '../../Icon.astro';
+import { CONNECTIONS } from '../../../data/onboarding.ts';
+import { SALON } from '../../../data/salon.ts';
+---
+<section class="ob-card">
+  <header class="ob-card-head"><div><h2 class="t-head">Connections</h2><p class="t-meta">Each connection shows its provider status. Prism checks them every hour.</p></div></header>
+  <ul class="ob-conns">
+    {CONNECTIONS.map((c) => (
+      <li class={c.waiting ? 'waiting' : ''} data-conn={c.id} data-need={c.need} data-ready={c.need ? 'false' : undefined}>
+        <span class="ob-tile-ic"><Icon name={c.icon} size={16} /></span>
+        <span class="ob-conn-copy"><strong>{c.name}</strong><small>{c.hint}</small></span>
+        {c.need
+          ? <><span class="tag good when-on"><i class="dot" style="background:currentColor;width:6px;height:6px"></i>Connected</span><span class="tag when-off">Not connected</span>
+              <button type="button" class="btn btn-sm when-on">Manage</button><button type="button" class="btn btn-sm btn-primary when-off" data-pick={c.need}>Connect</button></>
+          : c.waiting ? <><span class="tag violet">Waiting on provider</span><button type="button" class="btn btn-sm">Manage</button></>
+          : <><span class={`tag ${c.on ? 'good' : ''}`} data-conn-tag>{c.on ? 'Connected' : 'Not connected'}</span><button type="button" class={`btn btn-sm ${c.on ? '' : 'btn-primary'}`} data-conn-toggle>{c.on ? 'Manage' : 'Connect'}</button></>}
+      </li>
+    ))}
+  </ul>
+</section>
+
+<section class="ob-card">
+  <header class="ob-card-head"><div><h2 class="t-head">Credentials</h2><p class="t-meta">Write-only. Prism stores keys encrypted and only ever shows the last 4 characters.</p></div></header>
+  <div class="ob-fields c2">
+    <label class="field">{SALON.booking.system} API key<span class="ob-lock"><input class="input tnum" value="•••• •••• •••• 7F2K" readonly /><Icon name="lock" size={13} /></span></label>
+    <label class="field">Texting account ID<span class="ob-lock"><input class="input tnum" value="•••• •••• •••• 91AC" readonly /><Icon name="lock" size={13} /></span></label>
+  </div>
+  <div><button type="button" class="btn btn-sm" data-toast="Paste the new key in Settings › Connectors. The old one stops working right away."><Icon name="key-round" size={13} />Replace a key</button></div>
+</section>

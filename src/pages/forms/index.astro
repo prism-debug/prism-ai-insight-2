@@ -1,0 +1,95 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import StatusIcon from '../../components/StatusIcon.astro';
+import ListTools from '../../components/ListTools.astro';
+import Tag from '../../components/Tag.astro';
+import { FORMS, funnel } from '../../data/forms.ts';
+import { pct0, num } from '../../lib/format.ts';
+
+const published = FORMS.filter((f) => f.status === 'published' && !f.is_test);
+const draftN = FORMS.filter((f) => f.status === 'draft').length;
+const testN = FORMS.filter((f) => f.is_test).length;
+const totals = { sub: published.reduce((s, f) => s + f.submitted, 0), booked: published.reduce((s, f) => s + f.booked, 0) };
+const groups = [
+  { id: 'published', label: 'Published', icon: 'booked' },
+  { id: 'draft', label: 'Draft', icon: 'prospect' },
+  { id: 'test', label: 'Test', icon: 'off' },
+].map((g) => ({ ...g, items: FORMS.filter((f) => f.status === g.id) })).filter((g) => g.items.length);
+const consentText = (f: (typeof FORMS)[number]) => (f.consentAppt && f.consentPromo ? 'Appointments and offers' : f.consentAppt ? 'Appointments only' : 'None');
+const trackText = (f: (typeof FORMS)[number]) => (f.utm && f.clickId ? 'Campaign and click' : f.utm ? 'Campaign only' : f.clickId ? 'Click only' : 'None');
+// Red marks only a step-to-step drop-off worse than 70%.
+const RED = 70;
+const consentShort = (f: (typeof FORMS)[number]) => (f.consentAppt && f.consentPromo ? 'appointments, offers' : f.consentAppt ? 'appointments only' : 'none');
+const LABELS = ['Viewed', 'Started', 'Submitted', 'Booked'];
+---
+<AppShell title="Forms" active="forms" description="Forms and quizzes that capture leads, with a funnel per form, source tracking and the consent text each one uses.">
+  <div class="fm">
+    <header class="fm-title">
+      <div>
+        <h1 class="t-title">Forms</h1>
+        <p class="t-small muted measure hide-m">{published.length} published {published.length === 1 ? 'form counts' : 'forms count'} toward your numbers · {draftN} draft, {testN} test {testN === 1 ? 'form' : 'forms'} not counted. {num(totals.sub)} submitted and {num(totals.booked)} booked in 30 days.</p>
+      </div>
+      <div class="fm-act"><ListTools label="forms" /><button class="btn" data-toast="New form created as a draft. Pick a template to start." type="button"><Icon name="plus" size={14} />New form</button></div>
+    </header>
+
+    <div class="list fm-list">
+      <div class="row head fm-row"><span class="cell">Form</span>{LABELS.map((l) => <span class="cell right fm-c">{l}</span>)}<span class="cell">Tracks ad source</span><span class="cell">Text consent</span><span class="cell"></span></div>
+      {groups.map((g) => (
+        <div class="group" data-collapsed="false">
+          <button class="group-head" type="button"><Icon name="chevron-down" size={14} class="chev" /><StatusIcon state={g.icon} />{g.label}<span class="count">{g.items.length}</span></button>
+          <div class="group-body">
+            {g.items.map((f) => {
+              const fn = funnel(f);
+              const instant = f.id === 'meta-lead-ad'; // instant forms have no view or start steps
+              return (
+                <a class="row fm-row fm-link" href={`/forms/${f.id}`}>
+                  <span class="cell fm-name"><span class="truncate"><span class="name">{f.name}</span> <span class="sub">{f.kind}</span> {f.is_test && <Tag tone="off">Test form</Tag>}{!f.views && <span class="sub fm-nolive"> · Not live, no views yet</span>}</span></span>
+                  {fn.map((st, i) => (
+                    <span class="cell fm-c fm-fn" data-l={LABELS[i]} aria-label={`${LABELS[i]}: ${f.views && !(f.is_test && st.n === 0) && !(instant && i < 2) ? num(st.n) : 'none'}`}>
+                      {f.views && !(f.is_test && st.n === 0) && !(instant && i < 2) ? <><span class="fn-n tnum">{num(st.n)}</span><span class={`fn-d tnum ${st.drop != null && st.drop > RED ? 'hi' : ''}`}>{st.drop != null && !(instant && i === 2) ? `\u2212${st.drop}%` : ''}</span></> : <span class="muted">{'\u2014'}</span>}
+                    </span>
+                  ))}
+                  <span class="cell hide-m t-small"><Icon name={f.utm || f.clickId ? 'check' : 'x'} size={14} />{trackText(f)}</span>
+                  <span class="cell hide-m t-small muted">{consentText(f)}</span>
+                  <span class="cell fm-cap only-m t-small muted">Tracks {trackText(f).toLowerCase()} · Texts {consentShort(f)}</span>
+                  <Icon name="chevron-right" size={14} class="fm-go" />
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+    <p class="t-small muted fm-foot"><Icon name="info" size={14} />The percent beside each count is the share lost from the step before. Red marks drop-offs over 70%. A test form can be opened and previewed but never appears in Home, Leads or Marketing numbers.</p>
+  </div>
+</AppShell>
+
+<style is:global>
+  .fm { display: grid; gap: var(--s-5); max-width: 1180px; }
+  .fm .t-title { font-size: 20px; }
+  .fm-title { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-4); flex-wrap: wrap; }
+  .fm-act { display: flex; align-items: center; gap: var(--s-2); }
+  .fm-row { --cols: minmax(190px, 1fr) repeat(4, 96px) 150px 170px 16px; min-height: 44px; column-gap: var(--s-4); }
+  .fm-row.head { min-height: 30px; background: var(--sunken); border-top: 1px solid var(--line); }
+  .fm-go { color: var(--ink-4); justify-self: end; } .fm-link:hover .fm-go { color: var(--ink-2); }
+  .fm-c { justify-content: flex-end; }
+  .fm-fn { display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 6px; white-space: nowrap; font-size: var(--t-12); text-align: right; }
+  .fm-fn .muted { grid-column: 1 / -1; }
+  .fn-n { font-size: var(--t-14); font-weight: 600; color: var(--ink); }
+  .fn-d { color: var(--ink-3); font-weight: 500; } .fn-d.hi { color: var(--attn); font-weight: 600; }
+  .fm-foot { display: flex; gap: var(--s-2); align-items: flex-start; }
+  .fm-foot svg { margin-top: 2px; flex: none; }
+  .fm-cap { display: none; }
+  @media (max-width: 1100px) { .fm-row { --cols: minmax(150px, 1fr) repeat(4, 88px) 130px 16px; } .fm-row > :nth-child(7) { display: none; } }
+  @media (max-width: 900px) {
+    .fm-row.head { display: none; }
+    .fm-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px var(--s-2); padding: 12px var(--s-4); }
+    .fm-name { grid-column: 1 / -1; padding-right: 20px; } .fm-go { position: absolute; right: var(--s-4); top: 14px; }
+    .fm .fm-row .fm-fn { display: flex; flex-direction: column; align-items: flex-start; gap: 0; justify-content: flex-start; align-self: start; text-align: left; }
+    .fm .fm-row .fm-fn .fn-d:empty { display: none; }
+    .fm .fm-row .fm-fn::before { content: attr(data-l); font-size: var(--t-11); color: var(--ink-3); font-weight: 500; }
+    .fm-cap { display: block !important; grid-column: 1 / -1; font-size: var(--t-12); }
+    .fm .fm-act .btn { min-height: 44px; }
+  }
+</style>

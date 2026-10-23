@@ -1,0 +1,26 @@
+---
+// The launch site's nav: logo, section links and one pill call to action. Below 701px the links and the call to
+// action move behind a hamburger (src/scripts/waitlist-site.ts). focusHero makes the call to action bring the
+// hero's email field into view and focus it, instead of following the link.
+import Icon from '../Icon.astro';
+export interface NavLink { href: string; label: string }
+interface Props { links: NavLink[]; cta: { label: string; href: string; focusHero?: boolean } }
+const { links, cta } = Astro.props;
+const focus = cta.focusHero ? { 'data-focus-hero': '' } : {};
+---
+<header class="wl-nav">
+  <div class="wl-wrap wl-nav-in">
+    <a class="wl-logo" href="#top" aria-label="PRISM, back to top"><img src="/brand/mark-color.svg" alt="" width="30" height="35" /><img src="/brand/wordmark-midnight-bold.svg" alt="PRISM" width="89" height="28" /></a>
+    <nav aria-label="Sections">
+      {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+    <a class="wl-pill-btn" href={cta.href} {...focus}>{cta.label}</a>
+    <button class="wl-menu-btn" type="button" aria-expanded="false" aria-controls="wl-menu" aria-label="Open the menu"><span></span><span></span></button>
+  </div>
+  <div class="wl-menu" id="wl-menu" hidden>
+    <nav aria-label="Sections">
+      {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+    <a class="wl-btn wl-menu-cta" href={cta.href} {...focus}><span>{cta.label}</span><Icon name="arrow-right" size={16} /></a>
+  </div>
+</header>

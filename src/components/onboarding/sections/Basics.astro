@@ -1,0 +1,55 @@
+---
+import Icon from '../../Icon.astro';
+import Fill from '../Fill.astro';
+import { SALON, LOCATIONS } from '../../../data/salon.ts';
+const pb = SALON.booking.system;
+const hr = (h: number) => `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'pm' : 'am'}`;
+const week = [1, 2, 3, 4, 5, 6, 0].map((d) => SALON.hours.find((h) => h.d === d)!);
+---
+<Fill title="Business details" sub={`Prefilled from ${pb} and your website. Fix anything that looks off.`} need={['website', 'phorest']}>
+  <div class="ob-fields c3">
+    <label class="field">Salon name<input class="input" value={SALON.name} /></label>
+    <label class="field">Business type<input class="input" value="Hair and colour salon" /></label>
+    <label class="field">Main phone<span class="ob-lock"><input class="input" value={SALON.phone} readonly aria-describedby="ob-phone-h" /><Icon name="lock" size={13} /></span><span class="hint" id="ob-phone-h">From {pb}. Change it there.</span></label>
+    <label class="field">Booking email<input class="input" type="email" value={`hello@${SALON.site}`} /></label>
+    {LOCATIONS.map((l, i) => <label class="field">Location {i + 1}<input class="input" value={`${l.address}, ${l.name}`} /></label>)}
+  </div>
+</Fill>
+
+<Fill title="Opening hours" sub="Same hours at every location. Joy never offers times outside these." need={['phorest']}>
+  <div class="ob-hours-wrap">
+    <ul class="ob-hours" data-hours>
+      {week.map((h) => (
+        <li data-closed={h.open ? 'false' : 'true'}>
+          <span class="d">{h.label.slice(0, 3)}</span>
+          <input type="checkbox" class="switch" checked={!!h.open} aria-label={`Open on ${h.label}`} />
+          <span class="t tnum" data-open-text={h.open ? `${hr(h.open[0])} to ${hr(h.open[1])}` : '10:00 am to 6:00 pm'}>{h.open ? `${hr(h.open[0])} to ${hr(h.open[1])}` : 'Closed'}</span>
+        </li>
+      ))}
+    </ul>
+    <label class="ob-toggle">
+      <span><strong>Different hours per location</strong><small>Turn on to set hours for each salon</small></span>
+      <input type="checkbox" class="switch" />
+    </label>
+  </div>
+</Fill>
+
+<Fill title="Getting here" sub="Joy uses this for directions and first-visit questions." need={['website']}>
+  <div class="ob-fields c2">
+    <div class="field"><span>Parking</span>
+      <div class="ob-chips" data-single role="group" aria-label="Parking">
+        <button type="button" class="chip" aria-pressed="true">Free lot</button>
+        <button type="button" class="chip" aria-pressed="false">Street parking</button>
+        <button type="button" class="chip" aria-pressed="false">Paid garage</button>
+        <button type="button" class="chip" aria-pressed="false">None nearby</button>
+      </div>
+    </div>
+    <div class="field"><span>Accessibility</span>
+      <div class="ob-chips" role="group" aria-label="Accessibility">
+        <button type="button" class="chip" aria-pressed="true">Step-free entrance</button>
+        <button type="button" class="chip" aria-pressed="false">Elevator</button>
+        <button type="button" class="chip" aria-pressed="true">Accessible restroom</button>
+      </div>
+    </div>
+  </div>
+</Fill>

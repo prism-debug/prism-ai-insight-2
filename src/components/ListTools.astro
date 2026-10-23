@@ -1,0 +1,14 @@
+---
+import Icon from './Icon.astro';
+interface Props { filter?: boolean; display?: boolean; panel?: boolean; label?: string }
+const { filter = true, display = true, panel = false, label = 'this list' } = Astro.props;
+---
+<div class="list-tools" role="group" aria-label={`Controls for ${label}`}>
+  {filter && <button class="icon-btn" type="button" aria-label={`Filter ${label}`} data-toast="Filters are coming in the next build"><Icon name="list-filter" size={16} /></button>}
+  {display && <button class="icon-btn" type="button" aria-label={`Display options for ${label}`} data-toast="Display options are coming in the next build"><Icon name="sliders-horizontal" size={16} /></button>}
+  {panel && <button class="icon-btn" type="button" aria-label="Toggle side panel" data-toast="Panel toggle is coming in the next build"><Icon name="panel-right" size={16} /></button>}
+</div>
+<style is:global>
+  .list-tools { display: inline-flex; gap: 2px; align-items: center; }
+  .list-tools .icon-btn { color: var(--ink-3); }
+</style>

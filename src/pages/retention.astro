@@ -1,0 +1,212 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import MetricStrip from '../components/MetricStrip.astro';
+import ListTools from '../components/ListTools.astro';
+import Panels from '../components/retention/Panels.astro';
+import LifecycleBar from '../components/retention/LifecycleBar.astro';
+import StageFunnel from '../components/retention/StageFunnel.astro';
+import WinBackDrawer from '../components/retention/WinBackDrawer.astro';
+import { WINBACK, WB_TOTAL_VALUE, WB_OK, WB_SKIP, WB_OK_VALUE, BACK_ALL, BACK_BY_STYLIST, BACK_BY_SOURCE, REBOOK, REBOOK_OK, REBOOK_NO_PROMO, REBOOK_NO_TEXT, REBOOK_VALUE, LIFE, LIFE_TOTAL, LIFE_OVERDUE_VALUE, PAST, CUR, noTextReason } from '../data/retention.ts';
+import { NOW, DAY } from '../data/clock.ts';
+import { money, pct0, plural, dateShort, first } from '../lib/format.ts';
+
+// Rebook due: REBOOK is already sorted by days late, longest first.
+const rebookShown = REBOOK.slice(0, 8);
+const optedCaption = 'No promo consent on file; these clients can still book. Ask at their next visit.';
+const skipValue = WB_TOTAL_VALUE - WB_OK_VALUE;
+const reach = [
+  { label: 'All overdue clients', value: money(LIFE_OVERDUE_VALUE), note: `${WINBACK.length} clients`, info: 'At risk and lapsed clients, added together. Estimate from each client’s usual spend; not money lost.' },
+  { label: 'Can be texted', value: money(WB_OK_VALUE), note: `${WB_OK.length} clients`, info: `${WB_OK.length} clients said yes to texts and to promotions.` },
+  { label: 'Not reachable by text', value: money(skipValue), note: `${WB_SKIP.length} clients`, info: optedCaption },
+];
+const rebookMsg = `Joy will text ${REBOOK_OK.length} of these ${REBOOK.length} about rebooking; ${REBOOK.length - REBOOK_OK.length} skipped without consent`;
+const why = [REBOOK_NO_PROMO ? `${REBOOK_NO_PROMO} have no promo consent` : '', REBOOK_NO_TEXT ? `${REBOOK_NO_TEXT} have no text consent` : ''].filter(Boolean).join(', ');
+const lifeStrip = LIFE.map((l) => ({ label: l.label, value: `${l.n} clients`, note: `${money(l.value)} usual spend`, info: `${l.rule}. Next-visit value is each client’s usual spend added up; not money lost.` }));
+const weeks = (d: number) => (d % 7 === 0 ? `${d / 7} weeks` : `${d} days`);
+const overall = CUR.return90;
+const pastTotal = PAST.reduce((s, p) => s + p.value, 0);
+---
+<AppShell title="Retention" active="retention" description="Who is overdue, how clients move up, and the consent-checked win-back list.">
+  <Panels />
+  <div class="pg">
+    <header class="pg-head">
+      <div class="pg-copy">
+        <h1 class="t-verdict">{money(WB_OK_VALUE)} of next visits sit with {WB_OK.length} overdue clients you can text.</h1>
+        <p class="attrib t-meta hide-m"><Avatar kind="dash" size="sm" /><span><strong class="strong">Win back {WB_OK.length} clients · {money(WB_OK_VALUE)} next-visit value</strong> · Dash, from each client’s last visit and usual spend</span></p>
+      </div>
+      <button class="btn btn-black" type="button" data-open-winback><span>Win back <span data-wb-n>{WB_OK.length}</span> clients</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+    </header>
+    <div class="only-m"><p class="life-chips" aria-label="Clients by lifecycle">
+      {LIFE.map((l, i) => <><a class="chip-link" href="#h-life">{l.label} <span class="tnum">{l.n}</span></a>{i < LIFE.length - 1 && <span class="sep" aria-hidden="true">·</span>}</>)}
+      <a class="chip-link rb-link" href="#h-rb">Rebook due <span class="tnum">{REBOOK.length}</span></a>
+    </p></div>
+
+    <div class="strip reach pg-reach" style="--n:3" role="group" aria-label="Overdue clients by consent">
+      {reach.map((m, i) => (
+        <div class={`metric ${i === 0 ? 'hide-m' : ''}`} title={m.info}>
+          <span class="metric-label">{m.label}<Icon name="info" size={12} /></span>
+          <span class="metric-value">{m.value}</span>
+          <span class="metric-was"><span>{m.note}</span></span>
+        </div>
+      ))}
+    </div>
+
+    <section class="panel sec-life" aria-labelledby="h-life">
+      <header class="panel-head"><h2 class="t-head" id="h-life">Where your clients are</h2><span class="t-meta tnum">{LIFE_TOTAL} clients</span></header>
+      <LifecycleBar />
+      <MetricStrip items={lifeStrip} cols={3} />
+    </section>
+
+    <section class="panel sec-wb" aria-labelledby="h-wb" data-filterable>
+      <header class="panel-head">
+        <h2 class="t-head" id="h-wb">Win back <span class="tnum">{WB_OK.length}</span> of <span class="tnum">{WINBACK.length}</span> overdue clients <span class="muted" title={optedCaption}>({WB_SKIP.length} opted out)</span></h2>
+        <div class="acts">
+          <ListTools label="win-back list" />
+          <button class="chip chip-solid" type="button" data-filter-key="consent" data-filter-value="yes" data-toggle="1" aria-pressed="false"><Icon name="message-circle" size={13} />Can text</button>
+        </div>
+      </header>
+      <div class="toolbar wb-tools">
+        <label class="wb-all"><input type="checkbox" class="check" id="wb-all" checked aria-label="Select everyone who can be texted" /><span class="t-small"><span class="strong tnum" data-wb-n>{WB_OK.length}</span> selected</span><span class="t-small muted hide-m" title={optedCaption}>· {WB_SKIP.length} opted out can’t be selected. {optedCaption}</span></label>
+        <input class="input wb-search" type="search" placeholder="Search clients" aria-label="Search clients" data-filter-search />
+      </div>
+      <div class="list wb-scroll">
+        <div class="row head lst wb sticky-h hide-m"><span class="cell"></span><span class="cell">Client</span><span class="cell">Last visit</span><span class="cell right">Usual spend</span><span class="cell">Usual service</span><span class="cell">Texts</span></div>
+        {(['at_risk', 'lapsed'] as const).map((k) => {
+          const rows = WINBACK.filter((w) => w.life === k);
+          return (
+            <div class="group" data-collapsed={k === 'lapsed' ? 'true' : 'false'}>
+              <button class="group-head" type="button"><span class="chev" aria-hidden="true"><Icon name="chevron-down" size={14} /></span><StatusIcon state={k} /><span>{k === 'at_risk' ? 'At risk' : 'Lapsed'}</span><span class="count">{rows.length}</span></button>
+              <div class="group-body">
+                {rows.map((w) => (
+                  <div class="row lst wb" data-row data-consent={w.ok ? 'yes' : 'no'} data-text={w.c.name.toLowerCase()}>
+                    <label class="cell hit"><input type="checkbox" class="check wb-check" checked={w.ok} disabled={!w.ok} data-first={first(w.c.name)} data-stylist={first(w.sty.name)} data-service={w.svc.name.toLowerCase()} data-ticket={w.c.avgTicket} aria-label={`Include ${w.c.name}`} /></label>
+                    <span class="cell"><Avatar name={w.c.name} size="sm" /><span class="truncate"><a class="name" href={`/clients/${w.c.id}`}>{w.c.name}</a><span class="sub only-m"> · {w.days} d ago · {money(w.c.avgTicket)}</span></span></span>
+                    <span class="cell muted hide-m tnum">{dateShort(w.c.lastVisitAt)} · {w.days} d ago</span>
+                    <span class="cell right tnum hide-m">{money(w.c.avgTicket)}</span>
+                    <span class="cell muted hide-m truncate">{w.svc.name} · {first(w.sty.name)}</span>
+                    <span class="cell wb-state" title={w.ok ? 'Said yes to texts and to promotions' : noTextReason(w.c)}>{w.ok ? <><Icon name="check" size={14} class="ok-mute" label="Can text" /><span class="t-small hide-m">Can text</span></> : <><StatusIcon state="declined" label={noTextReason(w.c)} /><span class="t-small muted hide-m">{noTextReason(w.c)}</span></>}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        <div class="empty" data-filter-empty hidden><strong>No clients match</strong>Clear the search or turn off “Can text”.</div>
+      </div>
+    </section>
+
+    <section class="panel sec-rb" aria-labelledby="h-rb">
+      <header class="panel-head">
+        <h2 class="t-head" id="h-rb">Rebook due <span class="tnum">{REBOOK.length}</span> <span class="muted tnum">· {money(REBOOK_VALUE)} next-visit value</span></h2>
+        <div class="acts"><ListTools label="rebook list" /><button class="btn btn-sm" type="button" data-toast={rebookMsg} data-undo="1">Text {REBOOK_OK.length} about rebooking</button></div>
+      </header>
+      <p class="t-meta panel-note" style="padding-bottom:var(--s-2)">Active clients with nothing booked who are past the usual gap for their last service. Longest overdue first. Only {REBOOK_OK.length} of {REBOOK.length} can be texted ({why}).</p>
+      <div class="list">
+        <div class="row head lst rb hide-m"><span class="cell"></span><span class="cell">Client</span><span class="cell">Overdue</span><span class="cell right">Usual spend</span><span class="cell">Usual service</span><span class="cell">Texts</span></div>
+        {rebookShown.map((r) => (
+          <div class="row lst rb">
+            <span class="cell hide-m"></span>
+            <span class="cell"><Avatar name={r.c.name} size="sm" /><span class="truncate"><a class="name" href={`/clients/${r.c.id}`}>{r.c.name}</a><span class="sub only-m"> · {r.svc.name} · {r.over} d late · {money(r.c.avgTicket)}</span></span></span>
+            <span class="cell muted tnum hide-m">{r.over} d</span>
+            <span class="cell right tnum hide-m">{money(r.c.avgTicket)}</span>
+            <span class="cell muted hide-m truncate">{r.svc.name} · every {weeks(r.svc.rebookDays)}</span>
+            <span class="cell wb-state" title={r.ok ? 'Said yes to texts and promotions' : noTextReason(r.c)}>{r.ok ? <><Icon name="check" size={14} class="ok-mute" label="Can text" /><span class="t-small hide-m">Can text</span></> : <><StatusIcon state="declined" label={noTextReason(r.c)} /><span class="t-small muted hide-m">{noTextReason(r.c)}</span></>}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <div class="two sec-two">
+      <section class="panel" aria-labelledby="h-fn">
+        <header class="panel-head"><h2 class="t-head" id="h-fn">How clients move up</h2><span class="t-meta">Share who go on to the next stage</span></header>
+        <StageFunnel />
+      </section>
+
+      <section class="panel" aria-labelledby="h-90">
+        <header class="panel-head"><h2 class="t-head" id="h-90">Back in 90 days</h2><div class="acts"><span class="t-meta" title="Of clients last seen 3 to 6 months ago, the share who visited again within 90 days of that visit.">{BACK_ALL.back} of {BACK_ALL.n} clients</span><ListTools label="stylist table" /></div></header>
+        <p class="panel-note"><span class="t-title tnum" style="display:inline">{pct0(overall)}</span> <span class="muted t-body">of clients came back within 90 days of a visit.</span></p>
+        <div class="list">
+          <div class="row head b90"><span class="cell">By stylist</span><span class="cell hide-m"></span><span class="cell right">Back</span></div>
+          {BACK_BY_STYLIST.map((s) => (
+            <div class="row b90"><span class="cell"><Avatar name={s.name} size="sm" /><span class="name truncate">{s.name}</span></span><span class="cell hide-m">{s.rate !== null && <span class="meter" tabindex="0" data-tip={`${s.name}|Came back within 90 days~${pct0(s.rate)}|Clients~${s.back} of ${s.n}`} role="img" aria-label={`${pct0(s.rate)} back`}><i style={`width:${s.rate * 100}%`}></i></span>}</span><span class="cell right tnum"><span class="strong">{s.rate === null ? '–' : pct0(s.rate)}</span> <span class="sub">{s.back}/{s.n}</span></span></div>
+          ))}
+          <div class="row head b90"><span class="cell">By first source</span><span class="cell hide-m"></span><span class="cell right">Back</span></div>
+          {BACK_BY_SOURCE.map((s) => (
+            <div class="row b90"><span class="cell"><span class="name truncate">{s.name}</span></span><span class="cell hide-m">{s.rate !== null && <span class="meter" tabindex="0" data-tip={`${s.name}|Came back within 90 days~${pct0(s.rate)}|Clients~${s.back} of ${s.n}`} role="img" aria-label={`${pct0(s.rate)} back`}><i style={`width:${s.rate * 100}%`}></i></span>}</span><span class="cell right tnum"><span class="strong">{s.rate === null ? '–' : pct0(s.rate)}</span> <span class="sub">{s.back}/{s.n}</span></span></div>
+          ))}
+        </div>
+      </section>
+    </div>
+
+    <section class="panel sec-past" aria-labelledby="h-past">
+      <header class="panel-head"><h2 class="t-head" id="h-past">Past win-backs</h2><span class="t-meta tnum">{money(pastTotal)} rebooked in total</span></header>
+      <div class="list">
+        <div class="row head pw"><span class="cell">Message</span><span class="cell right hide-m">Sent</span><span class="cell right hide-m">Replied</span><span class="cell right">Rebooked</span><span class="cell right hide-m">Opted out</span><span class="cell right">Back in dollars</span></div>
+        {PAST.map((p) => (
+          <div class="row pw"><span class="cell"><span class="truncate"><span class="name">{p.name}</span> <span class="sub">{p.when}</span></span></span><span class="cell right tnum hide-m">{p.sent}</span><span class="cell right tnum hide-m">{p.replied}</span><span class="cell right tnum">{p.rebooked}</span><span class="cell right tnum hide-m">{p.optedOut}</span><span class="cell right tnum strong">{money(p.value)}</span></div>
+        ))}
+      </div>
+    </section>
+  </div>
+  <WinBackDrawer />
+</AppShell>
+<script>import '../scripts/retention.ts';</script>
+
+<style>
+  .b90 { --cols: minmax(120px, 1.2fr) minmax(80px, 1fr) 96px; }
+  .pg { --lgrid: 28px minmax(170px, 1.3fr) minmax(110px, 1fr) 90px minmax(130px, 1fr) 150px; }
+  .lst { --cols: var(--lgrid); }
+  .hit { justify-content: center; }
+  .pg { gap: var(--s-5); }
+  .sec-life :global(.panel-head) { border-bottom: 0; min-height: 28px; padding-bottom: 0; }
+  .sec-life :global(.lc-bar) { margin: var(--s-2) 0; }
+  .pw { --cols: minmax(160px, 1.6fr) 60px 70px 80px 80px 110px; }
+  :global(.ok-mute) { color: var(--ink-3); flex: none; }
+  .chip-solid { border-style: solid; }
+  .life-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s-2); font-size: var(--t-13); color: var(--ink-2); }
+  .lst.head .cell:nth-child(2) { padding-left: 30px; }
+  .life-chips .sep { color: var(--ink-4); }
+  .chip-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink-2); font-weight: 500; }
+  .chip-link .tnum { margin-left: 4px; font-weight: 600; color: var(--ink); }
+  .rb-link { margin-left: auto; text-decoration: underline; text-underline-offset: 3px; }
+  .wb-scroll { max-height: 200px; overflow-y: auto; border-bottom: 1px solid var(--line); }
+  .sticky-h { position: sticky; top: 0; z-index: 2; }
+  .wb-tools { padding-left: var(--s-1); padding-right: var(--s-1); }
+  .wb-all { display: flex; align-items: center; gap: var(--s-3); flex: 1; }
+  .wb-search { max-width: 240px; }
+  .wb-state { gap: 6px; }
+  @media (max-width: 900px) {
+    .b90 { --cols: minmax(0, 1fr) 90px; }
+    .lst { --cols: 44px minmax(0, 1fr) 44px; min-height: 52px; padding-top: 4px; padding-bottom: 4px; }
+    .lst.rb { --cols: minmax(0, 1fr) 44px; }
+    .hit { min-height: 44px; margin-left: -8px; }
+    .wb-state { justify-content: center; min-height: 44px; }
+    .pw { --cols: minmax(0, 1fr) 70px 90px; }
+    .wb-search { max-width: none; flex: 1; min-width: 120px; }
+    .wb-all { flex: none; white-space: nowrap; }
+    .wb-scroll { max-height: 400px; }
+    .sec-wb :global(.panel-head), .sec-rb :global(.panel-head) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--s-2); row-gap: 0; }
+    .sec-wb :global(.panel-head .acts), .sec-rb :global(.panel-head .acts) { display: contents; }
+    .sec-wb :global(.panel-head h2), .sec-rb :global(.panel-head h2) { grid-column: 1; grid-row: 1; }
+    .sec-wb :global(.panel-head .list-tools), .sec-rb :global(.panel-head .list-tools) { grid-column: 2; grid-row: 1; justify-self: end; margin-right: -10px; }
+    .sec-wb :global(.panel-head .chip), .sec-rb :global(.panel-head .btn) { grid-column: 1 / -1; grid-row: 2; justify-self: start; min-height: 44px; margin-bottom: var(--s-1); }
+    .pg { display: flex; flex-direction: column; gap: var(--s-4); }
+    .pg > .sec-life, .pg > .sec-two, .pg > .sec-past { margin-top: var(--s-4); }
+    .pg-reach { order: 1; } .sec-wb { order: 2; } .sec-rb { order: 3; } .sec-life { order: 4; } .sec-two { order: 5; } .sec-past { order: 6; }
+    .reach { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    .reach .metric:nth-child(2) { padding-left: 0; border-right: 1px solid var(--line); border-bottom: 0; }
+    .reach .metric:nth-child(3) { padding-left: var(--s-4); border-right: 0; border-bottom: 0; }
+    .sec-life :global(.strip) { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    .sec-life :global(.metric) { padding: 10px 8px; border-bottom: 0 !important; }
+    .sec-life :global(.metric:nth-child(odd)), .sec-life :global(.metric:nth-child(2n)) { padding-left: 8px; }
+    .sec-life :global(.metric:first-child) { padding-left: 0; }
+    .sec-life :global(.metric:nth-child(3)) { border-right: 0; }
+    .sec-life :global(.metric-value) { font-size: var(--t-14); }
+    .sec-life :global(.metric-was) { font-size: 11px; }
+  }
+  .pg-reach .metric { padding-top: 10px; padding-bottom: 10px; }
+  .sec-life :global(.metric) { padding-top: 10px; padding-bottom: 10px; }
+</style>

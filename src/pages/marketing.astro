@@ -1,0 +1,324 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import ListTools from '../components/ListTools.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import MetricStrip from '../components/MetricStrip.astro';
+import TabMenu from '../components/settings/TabMenu.astro';
+import Panels from '../components/retention/Panels.astro';
+import SpendBookedChart from '../components/marketing/SpendBookedChart.astro';
+import CalendarMonth from '../components/marketing/CalendarMonth.astro';
+import { CUR, PRV } from '../data/metrics.ts';
+import { WEEKLY, CHANNELS_SHOWN as CHANNELS, CHANNEL_ADS_TOTAL, AGENCY, AGENCY_BACK, AGENCY_COST, CHECKS, VERDICT, CAMPAIGN_ROWS, LOG_THIS, LOG_LAST, srcName, BUDGET, BUDGET_TOTAL, DAY_OF_MONTH, TRACKING, CONVERSIONS, MATCH, UTM_ADS, MONTHS } from '../data/marketing.ts';
+import { RECURRING, SOURCES } from '../data/salon.ts';
+import { atDay } from '../data/clock.ts';
+import { money, times, pct0, delta, dateShort } from '../lib/format.ts';
+
+const d = (c: number, p: number) => { const x = delta(c, p); return { dir: x.dir, tone: x.tone }; };
+const strip = [
+  { label: 'Spent on ads', value: money(CUR.adSpend), was: money(PRV.adSpend), dir: d(CUR.adSpend, PRV.adSpend).dir, tone: 'flat' as const, info: 'Everything you spent on Meta and Google ads in the last 30 days. The Knot is a listing fee, not ad spend.' },
+  { label: 'Booked, all sources', value: money(CUR.bookedValue), was: money(PRV.bookedValue), ...d(CUR.bookedValue, PRV.bookedValue), info: 'Value of appointments booked by people who first contacted you in this period, from every source, including upcoming ones.' },
+  { label: 'Left after ad spend', value: money(CUR.keptAfterAds), was: money(PRV.keptAfterAds), ...d(CUR.keptAfterAds, PRV.keptAfterAds), info: `Meta and Google leads only: ${money(CUR.adValue)} booked, minus ${money(CUR.adSpend)} ad spend. Not profit.` },
+  { label: 'Booked per $1 of ads', value: times(CUR.returnPerAd), was: times(PRV.returnPerAd), ...d(CUR.returnPerAd, PRV.returnPerAd), info: 'Meta and Google leads only: their booked value divided by ad spend. Marketers call this ROAS.' },
+];
+const attnCount = [...TRACKING, ...CONVERSIONS].filter((x) => x.state !== 'ok').length;
+const adsTotal = CHANNEL_ADS_TOTAL.spend;
+const listingTotal = CHANNELS.filter((c) => c.source.type === 'directory').reduce((s, c) => s + c.spendShown, 0);
+const chanSpend = (c: (typeof CHANNELS)[number]) => (c.source.type === 'directory' ? `listing ${money(c.spendShown)}` : c.spend ? money(c.spendShown) : 'No ad spend');
+const adRows = CHANNELS.filter((c) => c.source.type === 'ads');
+const freeRows = CHANNELS.filter((c) => c.source.type !== 'ads' && c.source.type !== 'directory');
+const listingRows = CHANNELS.filter((c) => c.source.type === 'directory');
+const allLeads = CHANNELS.reduce((s, c) => s + c.leads, 0);
+const allBooked = CHANNELS.reduce((s, c) => s + c.booked, 0);
+const withFees = CUR.marketingSpend ? CUR.adValue / CUR.marketingSpend : 0;
+const reconLine = `${money(CUR.adValue)} from Meta and Google leads minus ${money(CUR.adSpend)} spent = ${money(CUR.keptAfterAds)}`;
+const tabItems = [{ id: 'overview', label: 'Overview' }, { id: 'campaigns', label: 'Campaigns', count: CAMPAIGN_ROWS.length }, { id: 'spend', label: 'Ad spend' }, { id: 'attribution', label: 'Where bookings come from', count: attnCount }, { id: 'calendar', label: 'Calendar' }];
+const checksBad = CHECKS.filter((c) => c.state !== 'ok').length;
+const stIcon = { ok: 'connected', partial: 'pending', missing: 'not_answered' } as const;
+const stWord = { ok: 'Working', partial: 'Partly working', missing: 'Not working' } as const;
+const originIcon = { Synced: 'refresh-cw', Manual: 'pencil', Recurring: 'repeat' } as const;
+const dayLabel = (n: number) => dateShort(atDay(n));
+const adSources = SOURCES.filter((s) => s.type === 'ads' || s.id === 'knot');
+const paceWord = (b: (typeof BUDGET)[number]) => (!b.projected || !b.budget ? '' : b.projected > b.budget * 1.03 ? 'Over' : b.projected < b.budget * 0.9 ? 'Under' : 'On pace');
+---
+<AppShell title="Marketing" active="marketing" description="Ad spend against booked revenue, campaigns, the agency report, attribution and the marketing calendar.">
+  <Panels />
+  <div class="pg">
+    <header class="pg-head">
+      <div class="pg-copy">
+        <h1 class="t-verdict" title="Meta and Google leads only; Instagram, phone, form and referral bookings are not counted here.">Each $1 on ads brought back {times(CUR.returnPerAd)} in bookings.</h1>
+        <p class="t-small muted measure retainer-line hide-m">This leaves out the {money(AGENCY.retainer)} a month agency retainer and the {money(listingTotal)} listing fee. With them the return is {times(withFees)} per $1.</p>
+        <p class="t-small muted measure hide-m">Meta and Google leads only; Instagram, phone, form and referral bookings are not counted here. You spent {money(CUR.adSpend)} and those leads booked {money(CUR.adValue)}. Meta carries it; Google Ads is the weak spot.</p>
+      </div>
+    </header>
+
+    <div data-tabs class="tabs-root">
+      <TabMenu name="mk" label="Marketing view" items={tabItems} />
+      <div class="tab-wrap has-tm">
+        <div class="tabs" role="tablist" aria-label="Marketing views">
+          <button class="tab" role="tab" data-panel="overview" aria-selected="true">Overview</button>
+          <button class="tab" role="tab" data-panel="campaigns" aria-selected="false">Campaigns <span class="count">{CAMPAIGN_ROWS.length}</span></button>
+          <button class="tab" role="tab" data-panel="spend" aria-selected="false">Ad spend</button>
+          <button class="tab" role="tab" data-panel="attribution" aria-selected="false">Where bookings come from <span class="count hot" title="checks to fix" aria-label={`${attnCount} checks to fix`}>{attnCount}</span></button>
+          <button class="tab" role="tab" data-panel="calendar" aria-selected="false">Calendar</button>
+        </div>
+      </div>
+
+      <!-- OVERVIEW -->
+      <div class="stack tabpane" data-panel-id="overview">
+        <MetricStrip items={strip} />
+        <p class="t-meta recon-line tnum">Left after ad spend: {reconLine}</p>
+
+        <div class="agbar" aria-label="Agency and campaigns">
+          <div class="agbar-main"><Avatar kind="dash" size="sm" /><span><span class="strong">Northshore Social</span> · retainer {money(AGENCY.retainer)} a month · Sam Greer</span></div>
+          <div class="agbar-links">{checksBad > 0 && <button class="link" type="button" data-goto-tab="attribution">Fix {checksBad} tracking checks</button>}<a class="link" href="#h-ag" data-goto-agency>View agency report</a><button class="link" type="button" data-goto-tab="campaigns">Campaigns <span class="tnum">{CAMPAIGN_ROWS.length}</span></button></div>
+        </div>
+
+        <section class="panel" aria-labelledby="h-chan">
+          <header class="panel-head"><h2 class="t-head" id="h-chan">What each channel paid back</h2><div class="acts"><span class="t-meta hide-m">Last 30 days</span><ListTools label="channel table" /></div></header>
+          <div class="list scroll">
+            <div class="row head ch"><span class="cell">Channel</span><span class="cell right hide-m">Spent</span><span class="cell right hide-m">Leads</span><span class="cell right hide-m">Booked</span><span class="cell right hide-m">Booked value</span><span class="cell right" title="Booked value divided by spend (ROAS)"><span class="hide-m">Booked per $1</span><span class="only-m">Per $1</span></span></div>
+            {adRows.map((c) => (
+              <div class="row ch"><span class="cell chname"><span class="name truncate">{c.source.name}</span>{c.source.type === 'directory' && <span class="sub hide-m">Listing, {money(c.spendShown)}/month</span>}<span class="sub only-m">{chanSpend(c) === 'No ad spend' ? 'No ad spend' : `${c.source.type === 'directory' ? 'Listing' : 'Spent'} ${money(c.spendShown)}`} · Booked {money(c.valueShown)}</span></span><span class="cell right tnum hide-m">{c.spend ? chanSpend(c) : <span class="muted">No ad spend</span>}</span><span class="cell right tnum hide-m">{c.leads}</span><span class="cell right tnum hide-m">{c.booked}</span><span class="cell right tnum hide-m">{money(c.valueShown)}</span>
+                <span class="cell right tnum strong" title={c.source.type === 'directory' ? 'Booked value divided by the listing fee' : undefined}>{c.back !== null ? <>{c.back < 1 && <Icon name="arrow-down-right" size={13} class="weak-ic" label="Returns less than it costs" />}{times(c.back)}</> : <span class="muted" style="font-weight:400">–</span>}</span></div>
+            ))}
+            <div class="row ch total"><span class="cell chname"><span class="name">Ad spend total</span><span class="sub only-m">Spent {money(adsTotal)} · Booked {money(CHANNEL_ADS_TOTAL.value)}</span></span><span class="cell right tnum strong hide-m">{money(adsTotal)}</span><span class="cell right tnum strong hide-m">{CHANNEL_ADS_TOTAL.leads}</span><span class="cell right tnum strong hide-m">{CHANNEL_ADS_TOTAL.booked}</span><span class="cell right tnum strong hide-m">{money(CHANNEL_ADS_TOTAL.value)}</span><span class="cell right tnum strong">{times(CHANNEL_ADS_TOTAL.value / CUR.adSpend)}</span></div>
+            <div class="ch-sep" role="presentation">Other sources, no ad spend</div>
+            {freeRows.map((c) => (
+              <div class="row ch"><span class="cell chname"><span class="name truncate">{c.source.name}</span>{c.source.type === 'directory' && <span class="sub hide-m">Listing, {money(c.spendShown)}/month</span>}<span class="sub only-m">{chanSpend(c) === 'No ad spend' ? 'No ad spend' : `${c.source.type === 'directory' ? 'Listing' : 'Spent'} ${money(c.spendShown)}`} · Booked {money(c.valueShown)}</span></span><span class="cell right tnum hide-m">{c.spend ? chanSpend(c) : <span class="muted">No ad spend</span>}</span><span class="cell right tnum hide-m">{c.leads}</span><span class="cell right tnum hide-m">{c.booked}</span><span class="cell right tnum hide-m">{money(c.valueShown)}</span>
+                <span class="cell right tnum strong" title={c.source.type === 'directory' ? 'Booked value divided by the listing fee' : undefined}>{c.back !== null ? <>{c.back < 1 && <Icon name="arrow-down-right" size={13} class="weak-ic" label="Returns less than it costs" />}{times(c.back)}</> : <span class="muted" style="font-weight:400">–</span>}</span></div>
+            ))}
+            {listingRows.map((c) => (
+              <div class="row ch"><span class="cell chname"><span class="name truncate">{c.source.name}</span>{c.source.type === 'directory' && <span class="sub hide-m">Listing, {money(c.spendShown)}/month</span>}<span class="sub only-m">{chanSpend(c) === 'No ad spend' ? 'No ad spend' : `${c.source.type === 'directory' ? 'Listing' : 'Spent'} ${money(c.spendShown)}`} · Booked {money(c.valueShown)}</span></span><span class="cell right tnum hide-m">{c.spend ? chanSpend(c) : <span class="muted">No ad spend</span>}</span><span class="cell right tnum hide-m">{c.leads}</span><span class="cell right tnum hide-m">{c.booked}</span><span class="cell right tnum hide-m">{money(c.valueShown)}</span>
+                <span class="cell right tnum strong" title={c.source.type === 'directory' ? 'Booked value divided by the listing fee' : undefined}>{c.back !== null ? <>{c.back < 1 && <Icon name="arrow-down-right" size={13} class="weak-ic" label="Returns less than it costs" />}{times(c.back)}</> : <span class="muted" style="font-weight:400">–</span>}</span></div>
+            ))}
+          </div>
+          <p class="t-meta panel-note all-src tnum">All sources: {allLeads} leads, {allBooked} booked, {money(CUR.bookedValue)}.</p>
+          <p class="t-meta panel-note">Ad spend {money(adsTotal)} · listing {money(listingTotal)} (The Knot is a listing fee, not ad spend).</p>
+        </section>
+
+        <section class="panel" aria-labelledby="h-wk">
+          <header class="panel-head"><h2 class="t-head" id="h-wk">Spend against what it booked, by week</h2><span class="t-meta">Counted in the week the guest first asked</span></header>
+          <div class="panel-body"><SpendBookedChart data={WEEKLY} /></div>
+        </section>
+
+        <section class="panel agency" id="agency" aria-labelledby="h-ag">
+          <header class="panel-head"><h2 class="t-head" id="h-ag">Is my agency working?</h2><span class="t-meta">Northshore Social · {money(AGENCY.retainer)} a month</span></header>
+          <div class="two ag-cols">
+            <dl class="kv">
+              <div><dt>Ad spend</dt><dd class="tnum">{money(AGENCY.adSpend)}</dd></div>
+              <div><dt>Retainer, one month</dt><dd class="tnum">{money(AGENCY.retainer)}</dd></div>
+              <div><dt>Leads from their ads</dt><dd class="tnum">{AGENCY.leads}</dd></div>
+              <div><dt>Booked</dt><dd class="tnum">{AGENCY.booked} · {money(AGENCY.value)}</dd></div>
+              <div><dt title="Booked value divided by ad spend plus the retainer">Booked per $1, retainer included</dt><dd class="tnum">{times(AGENCY_BACK)}</dd></div>
+            </dl>
+            <ul class="checks" aria-label="Tracking checklist">
+              {CHECKS.map((c) => (
+                <li class="check-row"><StatusIcon state={stIcon[c.state]} label={stWord[c.state]} size={16} /><div><div class="strong t-body">{c.label}</div><p class="t-small muted">{c.detail}</p></div></li>
+              ))}
+            </ul>
+          </div>
+          <p class="t-meta recon">Agency figures count ad leads only and include the retainer; the strip above counts every source.</p>
+          <div class="verdict-row">
+            <p class="t-body strong">{VERDICT}</p>
+            <button class="btn" type="button" data-toast="Checklist sent to Sam Greer at Northshore Social. You are copied." data-undo="1"><span>Send the checklist to Sam Greer (Northshore Social)</span><span class="arrow"><Icon name="arrow-right" size={14} /></span></button>
+          </div>
+        </section>
+      </div>
+
+      <!-- CAMPAIGNS -->
+      <div class="stack tabpane" data-panel-id="campaigns" hidden>
+        <section class="panel" aria-labelledby="h-camp">
+          <header class="panel-head"><h2 class="t-head" id="h-camp">Campaigns</h2><span class="t-meta">Last 30 days · tap a name to see its leads</span></header>
+          <div class="list scroll" id="camps">
+            <div class="row head cp"><span class="cell">Campaign</span><span class="cell hide-m">Goal</span><span class="cell right hide-m">Daily budget</span><span class="cell right hide-m">Spent</span><span class="cell right hide-m">Leads</span><span class="cell right hide-m" title="Cost per lead (CPL)">Per lead</span><span class="cell right">Booked</span><span class="cell right" title="Booked value divided by spend (ROAS)">Booked per $1</span><span class="cell right"></span></div>
+            {CAMPAIGN_ROWS.map((r) => (
+              <div class="crow" data-camp={r.campaign.id} data-state={r.campaign.status}>
+                <div class="row cp">
+                  <span class="cell"><span class="st"><span data-st="active" hidden={r.campaign.status !== 'active'}><StatusIcon state="active" label="Active" /></span><span data-st="learning" hidden={r.campaign.status !== 'learning'}><StatusIcon state="pending" label="Learning" /></span><span data-st="paused" hidden={r.campaign.status !== 'paused'}><StatusIcon state="off" label="Paused" /></span></span><span class="truncate"><a class="name" href="/leads">{r.campaign.name}</a> <span class="sub">{srcName(r.campaign.sourceId)}</span></span>{r.campaign.status === 'learning' && <span class="tag watch learn" title="The ad platform is still testing who to show this to">Learning</span>}<span class="tag off paused-tag" hidden={r.campaign.status !== 'paused'}>Paused</span></span>
+                  <span class="cell muted hide-m">{r.campaign.objective}</span>
+                  <span class="cell right tnum hide-m">{money(r.campaign.dailyBudget)}</span>
+                  <span class="cell right tnum hide-m">{r.spend ? money(r.spend) : '–'}</span>
+                  <span class="cell right tnum hide-m">{r.leads}</span>
+                  <span class="cell right tnum hide-m">{r.cpl ? money(r.cpl) : '–'}</span>
+                  <span class="cell right tnum">{r.booked}</span>
+                  <span class={`cell right tnum strong ${r.back !== null && r.back < 1 ? 'neg' : ''}`}>{r.back !== null ? times(r.back) : '–'}</span>
+                  <span class="cell right"><button class="btn btn-sm camp-toggle" type="button" data-id={r.campaign.id} data-name={r.campaign.name}>{r.campaign.status === 'paused' ? 'Resume' : 'Pause'}</button></span>
+                </div>
+                {r.tip && <p class="tip t-small"><Avatar kind="dash" size="sm" /><span><strong>Dash suggests:</strong> {r.tip}</span></p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <!-- AD SPEND -->
+      <div class="stack tabpane" data-panel-id="spend" hidden>
+        <section class="panel" aria-labelledby="h-bud">
+          <header class="panel-head"><h2 class="t-head" id="h-bud">October: budget against actual</h2><span class="t-meta">Day {DAY_OF_MONTH} of 31</span></header>
+          <div class="list">
+            <div class="row head bd"><span class="cell">Line</span><span class="cell right">Budget</span><span class="cell right">Spent so far</span><span class="cell right hide-m">On pace for</span><span class="cell right hide-m"></span></div>
+            {BUDGET.map((b) => (
+              <div class="row bd"><span class="cell"><span class="name truncate">{b.name}</span></span><span class="cell right tnum">{money(b.budget)}</span><span class="cell right tnum">{money(b.spent)}</span><span class="cell right tnum hide-m">{money(b.projected)}</span><span class={`cell right hide-m ${paceWord(b) === 'Over' ? 'neg' : paceWord(b) === 'On pace' ? 'pos' : 'muted'}`}>{b.pace ? paceWord(b) : 'Billed monthly'}</span></div>
+            ))}
+            <div class="row bd total"><span class="cell"><span class="name">Total</span></span><span class="cell right tnum strong">{money(BUDGET_TOTAL.budget)}</span><span class="cell right tnum strong">{money(BUDGET_TOTAL.spent)}</span><span class="cell right tnum strong hide-m">{money(BUDGET_TOTAL.projected)}</span><span class="cell right hide-m"></span></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-log">
+          <header class="panel-head">
+            <h2 class="t-head" id="h-log">Spend log</h2>
+            <div class="acts"><button class="btn btn-sm" type="button" data-toast="Spend log exported: ad-spend-october.csv"><Icon name="download" size={14} />Export</button><button class="btn btn-sm" type="button" id="add-spend-btn" aria-expanded="false" aria-controls="add-spend"><Icon name="plus" size={14} />Add spend</button></div>
+          </header>
+          <form class="add-spend" id="add-spend" hidden>
+            <label class="field">Date<input class="input" type="date" name="date" value="2026-10-10" required /></label>
+            <label class="field">Source<select class="select" name="source">{adSources.map((s) => <option value={s.id}>{s.name}</option>)}</select></label>
+            <label class="field">Campaign or note<input class="input" type="text" name="campaign" placeholder="Boost: Saturday open chairs" required /></label>
+            <label class="field">Amount<input class="input" type="number" name="amount" min="1" step="0.01" placeholder="25.00" required /></label>
+            <div class="add-acts"><button class="btn btn-primary" type="submit">Save spend</button><button class="btn btn-quiet" type="button" id="add-cancel">Cancel</button></div>
+            <p class="t-meta add-note">Manual entries are marked Manual in the log and counted in every return figure. Undo is offered after saving.</p>
+          </form>
+          <div class="list" id="log">
+            <div class="row head lg"><span class="cell">Date</span><span class="cell">Source</span><span class="cell hide-m">Campaign</span><span class="cell hide-m">Origin</span><span class="cell right">Amount</span></div>
+            <div class="group" data-collapsed="false"><button class="group-head" type="button"><span class="chev" aria-hidden="true"><Icon name="chevron-down" size={14} /></span><span>This week</span><span class="count">{LOG_THIS.length}</span></button>
+              <div class="group-body" id="log-this">{LOG_THIS.map((r) => (
+                <div class="row lg"><span class="cell tnum muted">{dayLabel(r.day)}</span><span class="cell name truncate">{srcName(r.sourceId)}</span><span class="cell muted truncate hide-m">{r.campaign}</span><span class="cell hide-m muted"><Icon name={originIcon[r.origin]} size={13} />{r.origin}</span><span class="cell right tnum">{money(r.amount, true)}</span></div>
+              ))}</div>
+            </div>
+            <div class="group" data-collapsed="true"><button class="group-head" type="button"><span class="chev" aria-hidden="true"><Icon name="chevron-down" size={14} /></span><span>Last week and earlier</span><span class="count">{LOG_LAST.length}</span></button>
+              <div class="group-body">{LOG_LAST.map((r) => (
+                <div class="row lg"><span class="cell tnum muted">{dayLabel(r.day)}</span><span class="cell name truncate">{srcName(r.sourceId)}</span><span class="cell muted truncate hide-m">{r.campaign}</span><span class="cell hide-m muted"><Icon name={originIcon[r.origin]} size={13} />{r.origin}</span><span class="cell right tnum">{money(r.amount, true)}</span></div>
+              ))}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-rec">
+          <header class="panel-head"><h2 class="t-head" id="h-rec">Recurring costs</h2><span class="t-meta tnum">{money(RECURRING.reduce((s, r) => s + r.monthly, 0))} a month</span></header>
+          <div class="list">
+            {RECURRING.map((r) => (
+              <div class="row rc"><span class="cell"><span class="name truncate">{r.name}</span></span><span class="cell right tnum">{money(r.monthly)} a month</span><span class="cell muted hide-m">Next charge 1 Nov</span><span class="cell right"><input class="switch rec-switch" type="checkbox" checked aria-label={`Count ${r.name} in marketing cost`} data-name={r.name} /></span></div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <!-- ATTRIBUTION -->
+      <div class="stack tabpane" data-panel-id="attribution" hidden>
+        <p class="t-body attr-fix"><Icon name="triangle-alert" size={15} />Ad clicks are not yet tied to bookings: add the tracking code to your booking page.</p>
+        <section class="panel" aria-labelledby="h-trk">
+          <header class="panel-head"><h2 class="t-head" id="h-trk">How each lead gets its source</h2><span class="t-meta">Figures are demonstration data</span></header>
+          <p class="t-meta panel-note" style="padding-bottom:0">A campaign tag (UTM) is a label on an ad link that says which campaign a click came from; a click ID is the ad platform’s own receipt for that click.</p>
+          <div class="list scroll">
+            <div class="row head tk"><span class="cell">Channel</span><span class="cell hide-m">Tracking number</span><span class="cell hide-m">How leads are tagged</span><span class="cell right" title="Share of leads that arrive with a campaign tag in the link (UTM)">Tag captured</span><span class="cell right hide-m" title="Share of leads that carry the ad platform’s click ID (fbclid, gclid)">Click ID</span><span class="cell right">State</span></div>
+            {TRACKING.map((t) => (
+              <div class="row tk"><span class="cell name truncate">{t.channel}</span><span class="cell muted tnum hide-m">{t.number ?? 'Not needed'}</span><span class="cell muted hide-m truncate">{t.via}</span><span class="cell right tnum">{t.utm ? pct0(t.utm) : '–'}</span><span class="cell right tnum hide-m">{t.clickId ? pct0(t.clickId) : '–'} {t.clickName && <span class="sub">{t.clickName}</span>}</span><span class="cell right"><StatusIcon state={stIcon[t.state]} label={stWord[t.state]} /><span class="t-small hide-m">{stWord[t.state]}</span></span></div>
+            ))}
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-cv">
+          <header class="panel-head"><h2 class="t-head" id="h-cv">Bookings sent back to the ad platforms</h2><span class="t-meta">So Meta and Google learn who actually becomes a client</span></header>
+          <p class="t-meta panel-note" style="padding-bottom:0">When someone books, PRISM tells the ad platform which click it came from, so its ads find more people like your clients.</p>
+          <div class="list">
+            <div class="row head cv"><span class="cell">Connection</span><span class="cell hide-m">What it does</span><span class="cell hide-m">Last sent</span><span class="cell right hide-m">Sent</span><span class="cell right">State</span></div>
+            {CONVERSIONS.map((c) => (
+              <div class="row cv"><span class="cell name truncate">{c.name}</span><span class="cell muted hide-m truncate">{c.what}</span><span class="cell muted hide-m">{c.last}</span><span class="cell right tnum hide-m">{c.sent ? `${c.sent} (${c.matched} matched)` : '–'}</span><span class="cell right"><StatusIcon state={stIcon[c.state]} label={stWord[c.state]} /><span class="t-small">{c.state === 'ok' ? 'Connected' : 'Not set up'}</span></span></div>
+            ))}
+          </div>
+          <div class="panel-note"><button class="btn btn-sm" type="button" data-toast="Setup steps for Google offline conversions sent to Sam Greer.">Ask Sam to set up Google</button></div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-mt">
+          <header class="panel-head"><h2 class="t-head" id="h-mt">Matches PRISM leads to booked revenue</h2></header>
+          <p class="panel-note t-body measure">Every lead keeps the first source it arrived from. When that person books, PRISM adds the appointment value to that source and campaign. In the last 30 days that matched {MATCH.booked} bookings out of {MATCH.leads} leads, worth {money(MATCH.value)}, to a source. {pct0(UTM_ADS)} of ad leads carried a campaign tag; the rest are placed by the number they called or the form they used.</p>
+        </section>
+      </div>
+
+      <!-- CALENDAR -->
+      <div class="stack tabpane" data-panel-id="calendar" hidden>
+        <section class="panel" aria-labelledby="h-cal">
+          <header class="panel-head">
+            <h2 class="t-head" id="h-cal"><span id="cal-name">{MONTHS[0].name}</span></h2>
+            <div class="seg" role="group" aria-label="Month">{MONTHS.map((m, i) => <button type="button" data-cal-btn={`${m.y}-${m.m}`} aria-pressed={String(i === 0)}>{m.name.split(' ')[0].slice(0, 3)}</button>)}</div>
+          </header>
+          <div class="cal-wrap panel-body">
+            {MONTHS.map((m, i) => <CalendarMonth y={m.y} m={m.m} name={m.name} hidden={i !== 0} />)}
+            <p class="t-meta cal-key"><span><i class="dot" style="background:var(--d-teal)"></i>Campaign</span> <span><i class="dot" style="background:var(--d-orange)"></i>Promo</span> <span><i class="dot" style="background:var(--d-deep)"></i>Bridal</span></p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</AppShell>
+<script>import '../scripts/marketing.ts';</script>
+
+<style>
+  .tabs-root { display: grid; gap: 0; }
+  .tabpane { gap: var(--s-6); }
+  .tabpane > :global(.strip) { border-top: 0; }
+  .tabs-root > :global(.tab-wrap) { padding-bottom: var(--s-1); }
+  .panel .row { padding-left: 12px; padding-right: 12px; }
+  .chname { display: grid; gap: 0; align-content: center; }
+  .agbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: var(--t-13); }
+  .agbar-main { display: flex; align-items: center; gap: var(--s-2); min-width: 0; flex-wrap: wrap; }
+  .agbar-links { display: flex; gap: var(--s-4); }
+  .agbar-links .link { font-size: var(--t-13); gap: 4px; }
+  .ch { --cols: minmax(130px, 1.2fr) 90px 60px 64px 100px 100px; }
+  .cp { --cols: minmax(210px, 1.8fr) 80px 90px 80px 60px 76px 62px 96px 74px; }
+  .bd { --cols: minmax(160px, 1.5fr) 90px 100px 100px 110px; }
+  .lg { --cols: 80px minmax(110px, 1fr) minmax(160px, 1.6fr) 110px 90px; }
+  .rc { --cols: minmax(0, 1.5fr) 140px 120px 50px; }
+  .tk { --cols: minmax(110px, 1fr) 130px minmax(160px, 1.5fr) 90px 100px 130px; }
+  .cv { --cols: minmax(170px, 1fr) minmax(200px, 1.6fr) 120px 140px 120px; }
+  .ch-sep { padding: 3px 12px; font-size: var(--t-12); color: var(--ink-3); background: var(--sunken); border-bottom: 1px solid var(--line); font-weight: 600; }
+  .all-src { padding-bottom: 0; }
+  .retainer-line { margin-top: var(--s-1); text-wrap: balance; }
+  :global(.weak-ic) { color: var(--ink); margin-right: 4px; flex: none; vertical-align: -2px; }
+  .recon { padding-top: var(--s-3); }
+  .recon-line { margin-top: calc(-1 * var(--s-3)); }
+  .attr-fix { display: flex; align-items: flex-start; gap: var(--s-2); font-weight: 600; }
+  .attr-fix :global(svg) { margin-top: 3px; flex: none; color: var(--ink-3); }
+  .total { background: var(--sunken); }
+  .st { display: inline-grid; place-items: center; width: 16px; flex: none; }
+  .crow { border-bottom: 1px solid var(--line); }
+  .crow .row { border-bottom: 0; }
+  .crow[data-state="paused"] .row .cell:not(:last-child) { color: var(--ink-3); }
+  .tip { display: flex; align-items: flex-start; gap: var(--s-2); padding: 0 var(--s-4) 10px 34px; color: var(--ink-2); }
+  .tip .avatar { margin-top: 1px; }
+  .checks { display: grid; align-content: start; padding: var(--s-1) 0; }
+  .check-row { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--s-3); padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .check-row:last-child { border-bottom: 0; }
+  .check-row :global(svg) { margin-top: 2px; }
+  .ag-cols { gap: var(--s-8); padding-top: var(--s-2); }
+  .verdict-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-6); padding: var(--s-4) 0 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .verdict-row p { max-width: 64ch; }
+  .add-spend { display: grid; grid-template-columns: 130px 150px minmax(0, 1fr) 110px; gap: var(--s-3); align-items: end; padding: var(--s-4) 0; border-bottom: 1px solid var(--line); }
+  .add-acts { grid-column: 1 / -1; display: flex; gap: var(--s-2); }
+  .add-note { grid-column: 1 / -1; }
+  .cal-key { display: flex; gap: var(--s-4); margin-top: var(--s-4); }
+  .cal-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .scroll { overflow-x: auto; }
+  @media (max-width: 1100px) { .cp { --cols: minmax(190px, 1.6fr) 70px 86px 76px 52px 68px 58px 90px 70px; } }
+  @media (max-width: 900px) {
+    .ch { --cols: minmax(0, 1fr) 72px; min-height: 44px; max-height: 52px; }
+    .row.head.ch { min-height: 0; height: 36px; max-height: 36px; }
+    .ch .chname .name { line-height: 1.25; }
+    .ch .chname .sub { line-height: 1.25; }
+    .tabpane { gap: var(--s-4); }
+    .agbar { padding: 0; gap: 0; }
+    .agbar-links { flex-wrap: wrap; column-gap: var(--s-4); }
+    .recon-line { margin-top: calc(-1 * var(--s-2)); }
+    .agbar-links .link { min-height: 44px; display: inline-flex; align-items: center; }
+    .cp { --cols: minmax(0, 1fr) 54px 84px 72px; }
+    .bd { --cols: minmax(0, 1fr) 76px 92px; }
+    .lg { --cols: 60px minmax(0, 1fr) 80px; }
+    .rc { --cols: minmax(0, 1fr) 118px 50px; }
+    .tk { --cols: minmax(0, 1fr) 70px 110px; }
+    .cv { --cols: minmax(0, 1fr) 110px; }
+    .add-spend { grid-template-columns: minmax(0, 1fr); }
+    .tip { padding-left: 12px; }
+    .verdict-row .btn { width: 100%; justify-content: space-between; }
+  }
+</style>

@@ -1,0 +1,9 @@
+---
+import { initials, tone } from '../lib/format.ts';
+interface Props { name?: string; kind?: 'person' | 'joy' | 'dash'; size?: 'sm' | 'md' | 'lg' | 'xl' | ''; tone?: number }
+const { name = '', kind = 'person', size = '', tone: t } = Astro.props;
+const cls = ['avatar', size, kind === 'joy' ? 'joy' : kind === 'dash' ? 'dash' : ''].filter(Boolean).join(' ');
+---
+{kind === 'joy' ? <span class={cls} title="Joy"><img src="/brand/joy-mark.svg" alt="" /></span>
+ : kind === 'dash' ? <span class={cls} title="Dash"><img src="/brand/dash-mark.svg" alt="" /></span>
+ : <span class={cls} data-tone={t ?? tone(name)} title={name}>{initials(name)}</span>}

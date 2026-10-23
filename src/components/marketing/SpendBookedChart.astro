@@ -1,0 +1,37 @@
+---
+import { money } from '../../lib/format.ts';
+interface Props { data: { label: string; spend: number; value: number }[]; height?: number }
+const { data, height = 200 } = Astro.props;
+const raw = Math.max(1, ...data.flatMap((d) => [d.spend, d.value]));
+const step = raw > 4000 ? 2000 : raw > 2000 ? 1000 : 500;
+const max = Math.ceil(raw / step) * step;
+const W = 560, H = height, pad = { l: 44, r: 6, t: 8, b: 22 };
+const gw = (W - pad.l - pad.r) / data.length;
+const y = (v: number) => pad.t + (H - pad.t - pad.b) * (1 - v / max);
+const ticks = Array.from({ length: max / step + 1 }, (_, i) => i * step);
+const summary = `Weekly ad spend against value booked by that week’s leads. ` + data.map((d) => `${d.label}: spent ${money(d.spend)}, booked ${money(d.value)}`).join('; ');
+---
+<figure class="sbc">
+  <figcaption class="sbc-key t-small"><span><i style="background:var(--d-orange)"></i>Spent on ads</span><span><i style="background:var(--d-teal)"></i>Booked by that week’s leads</span></figcaption>
+  <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={summary} style="display:block;height:auto;max-width:100%">
+    {ticks.map((t) => <g><line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="var(--line)" /><text x="0" y={y(t) + 3} font-size="11" fill="var(--ink-3)">{t >= 1000 ? `$${t / 1000}K` : `$${t}`}</text></g>)}
+    {data.map((d, i) => {
+      const x0 = pad.l + i * gw + gw * 0.14; const bw = gw * 0.36;
+      return (<g>
+        <rect class="sbc-hit" tabindex="0" x={pad.l + i * gw} y={pad.t} width={gw} height={H - pad.t - pad.b} data-tip={`Week of ${d.label}|Spent on ads~${money(d.spend)}|Booked by that week’s leads~${money(d.value)}|${d.spend > 0 ? `Back per $1~$${(d.value / d.spend).toFixed(2)}` : 'No ad spend that week'}`} />
+        <rect class="sbc-bar" x={x0} y={y(d.spend)} width={bw} height={Math.max(0, H - pad.b - y(d.spend))} rx="2" fill="var(--d-orange)" />
+        <rect class="sbc-bar" x={x0 + bw + 2} y={y(d.value)} width={bw} height={Math.max(0, H - pad.b - y(d.value))} rx="2" fill="var(--d-teal)" />
+        <text x={pad.l + i * gw + gw * 0.14} y={H - 6} font-size="11" fill="var(--ink-3)">{d.label}</text>
+      </g>);
+    })}
+  </svg>
+</figure>
+<style>
+  .sbc { margin: 0; display: grid; gap: var(--s-2); }
+  .sbc-key { display: flex; gap: var(--s-4); color: var(--ink-3); flex-wrap: wrap; }
+  .sbc-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .sbc-key i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .sbc-hit { fill: transparent; outline: none; cursor: default; transition: fill var(--dur) var(--ease); }
+  .sbc-hit:hover, .sbc-hit:focus-visible { fill: var(--violet-wash); }
+  .sbc-bar { pointer-events: none; }
+</style>

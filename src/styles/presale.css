@@ -1,0 +1,87 @@
+/* Presale page only (src/pages/presale.astro): the hero and closing calls to action that replace the waitlist
+   forms, the plan cards and the sign-up form. Everything else comes from src/styles/site.css. */
+
+.ps-hero-cta { display: flex; justify-content: center; margin-top: 32px; }
+.ps-close-cta { margin-top: 14px; }
+
+/* plans: three cards on one grid. Each card is a subgrid over the same eight rows (name, price, promise, the four
+   allowances, perks), so the allowance rows line up across the cards whatever the copy above them wraps to. */
+.pl-set { min-width: 0; margin: 0; padding: 0; border: 0; }
+.pl-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(8, auto); column-gap: 16px; text-align: left; }
+.pl { position: relative; grid-row: span 8; display: grid; grid-template-rows: subgrid; row-gap: 0; padding: 28px 28px 30px; background: #FBFAF8; border: 1px solid var(--line); border-radius: 24px; cursor: pointer; transition: border-color var(--dur) var(--ease), box-shadow .4s var(--ease); }
+.pl:hover { border-color: rgb(20 160 152 / .5); }
+.pl:has(.pl-radio:checked) { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal), 0 28px 56px -34px rgb(6 42 45 / .4); }
+.pl:has(.pl-radio:focus-visible) { outline: 2px solid var(--violet); outline-offset: 4px; }
+/* the native radio stays in the page for keyboard and screen readers, under the drawn tick */
+.pl-radio { position: absolute; top: 28px; right: 28px; width: 26px; height: 26px; margin: 0; opacity: 0; pointer-events: none; }
+.pl-radio:focus-visible { outline: none; }
+
+.pl-head { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+.pl-hit { font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; cursor: pointer; }
+/* the label covers the whole card, so a click anywhere on it picks the plan */
+.pl-hit::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: 24px; }
+.pl-badge { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--select); color: var(--violet-deep); font-size: 13px; font-weight: 650; white-space: nowrap; }
+.pl-tick { display: grid; place-items: center; flex: none; width: 26px; height: 26px; margin-left: auto; border: 1.5px solid var(--line-strong); border-radius: 50%; background: #fff; color: transparent; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+.pl:has(.pl-radio:checked) .pl-tick { background: var(--violet); border-color: var(--violet); color: #fff; }
+
+.pl-price { display: flex; align-items: baseline; gap: 6px; margin-top: 20px; }
+.pl-price b { font-size: 52px; font-weight: 650; letter-spacing: -.045em; line-height: 1; color: var(--ink); }
+.pl-price span { font-size: 16px; font-weight: 500; color: var(--ink-3); }
+.pl-promise { margin-top: 12px; padding-bottom: 22px; font-size: 16px; line-height: 1.45; color: var(--ink-2); text-wrap: pretty; }
+
+.pl-quotas { grid-row: span 4; display: grid; grid-template-rows: subgrid; row-gap: 0; border-top: 1px solid var(--line); }
+.pl-quotas li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; line-height: 1.35; color: var(--ink-2); }
+.pl-quotas svg { color: var(--violet); }
+.pl-q-v { font-weight: 650; color: var(--ink); text-align: right; white-space: nowrap; }
+.pl-quotas .is-off { color: var(--ink-3); }
+.pl-quotas .is-off svg { color: var(--ink-4); }
+.pl-quotas .is-off .pl-q-v { font-weight: 500; color: var(--ink-3); }
+
+.pl-perks { display: grid; align-content: start; gap: 10px; margin-top: 22px; font-size: 15px; line-height: 1.4; color: var(--ink-2); }
+.pl-perks li { display: flex; align-items: flex-start; gap: 10px; }
+.pl-perks svg { flex: none; margin-top: 2px; color: var(--violet); }
+.pl-perks .is-all { font-weight: 650; color: var(--ink); }
+
+.pl-over { max-width: 60ch; margin: 22px auto 0; font-size: 15px; color: var(--ink-3); text-align: center; text-wrap: balance; }
+
+/* sign-up, then pay: the chosen plan, four fields, and the button on to Stripe */
+.pl-form { max-width: 760px; margin: 48px auto 0; padding: 32px; text-align: left; background: #FBFAF8; border: 1px solid var(--line); border-radius: 24px; }
+.pl-form-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 22px; }
+.pl-form h3 { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.pl-summary output { display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px; border-radius: 999px; background: var(--select); color: var(--violet-deep); font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.pl-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.pl-field label { display: block; margin-bottom: 6px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.pl-field label span { font-weight: 450; color: var(--ink-3); }
+.pl-field .wl-input { display: block; width: 100%; }
+.pl-field .wl-input[aria-invalid="true"] { border-color: var(--attn); }
+.pl-field .wl-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 4px rgb(180 56 31 / .16); }
+.pl-err { margin-top: 6px; font-size: 14px; color: var(--attn); }
+.pl-err:empty { display: none; }
+.pl-submit { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 26px; }
+.pl-fine { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: var(--ink-3); }
+.pl-fine svg { flex: none; }
+.pl-status { margin-top: 14px; font-size: 15px; color: var(--violet-deep); }
+.pl-status:empty { display: none; }
+.pl-status.err { color: var(--attn); }
+.pl-done { display: flex; align-items: flex-start; gap: 16px; }
+.pl-done-ic { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--violet); color: #fff; }
+.pl-done p { padding-top: 6px; font-size: 18px; font-weight: 500; line-height: 1.5; color: var(--ink); text-wrap: pretty; }
+.pl-done p:focus { outline: none; }
+
+/* one column: the cards stack in page order, each laid out on its own */
+@media (max-width: 900px) {
+  .pl-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; row-gap: 16px; max-width: 560px; margin: 0 auto; }
+  .pl { grid-row: auto; display: flex; flex-direction: column; }
+  .pl-quotas { display: block; }
+  .pl-form { max-width: 560px; }
+}
+@media (max-width: 700px) {
+  .pl { padding: 24px 20px 26px; }
+  .pl-radio { top: 24px; right: 20px; }
+  .pl-price b { font-size: 46px; }
+  .pl-form { margin-top: 32px; padding: 24px 20px; }
+  .pl-fields { grid-template-columns: minmax(0, 1fr); }
+  .pl-submit .wl-btn { flex: 1 1 100%; }
+  .pl-fine { flex: 1 1 100%; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .pl, .pl-tick { transition: none; } }

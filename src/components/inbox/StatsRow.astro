@@ -1,0 +1,16 @@
+---
+import Icon from '../Icon.astro';
+import { STATS } from '../../data/inbox.ts';
+import { dur, pct0, delta } from '../../lib/format.ts';
+const S = STATS;
+const jd = delta(S.joy, S.joyPrev, { higherIsBetter: false });
+const td = delta(S.team, S.teamPrev, { higherIsBetter: false });
+const over = S.missedRate > S.missedAim;
+---
+<div class="stats" role="group" aria-label="Inbox at a glance, compared with the previous 30 days">
+  <div class="stat"><span class="s-label" title="Conversations whose latest guest message nobody has opened yet">Unread conversations</span><span class="s-val tnum" data-stat="needs">{S.needsReply}</span></div>
+  <div class="stat"><span class="s-label">Missed calls</span><span class="s-val tnum" title={over ? `Above the ${pct0(S.missedAim)} aim` : ''}>{pct0(S.missedRate)}</span><span class="s-was">{S.missedCalls} of {S.callsTotal} · aim under {pct0(S.missedAim)}</span></div>
+  <div class="stat hide-m"><span class="s-label">Voicemails unheard</span><span class="s-val tnum" data-stat="unheard">{S.unheard}</span></div>
+  <div class="stat hide-m"><span class="s-label">Joy first reply</span><span class="s-val tnum">{dur(S.joy)}</span><span class="s-was">{jd.dir !== 'flat' && <Icon name={jd.dir === 'up' ? 'arrow-up-right' : 'arrow-down-right'} size={12} />}vs {dur(S.joyPrev)} previous</span></div>
+  <div class="stat hide-m"><span class="s-label">Team first reply</span><span class="s-val tnum">{dur(S.team)}</span><span class="s-was">{td.dir !== 'flat' && <Icon name={td.dir === 'up' ? 'arrow-up-right' : 'arrow-down-right'} size={12} />}vs {dur(S.teamPrev)} previous</span></div>
+</div>

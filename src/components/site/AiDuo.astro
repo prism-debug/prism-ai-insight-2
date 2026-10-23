@@ -1,0 +1,93 @@
+---
+// Joy and Dash, the two AI helpers, as two split cards. Both windows play on their own (src/scripts/waitlist-ai.ts).
+import Icon from '../Icon.astro';
+import { ANSWERS } from '../../data/dash.ts';
+import { service, SALON } from '../../data/salon.ts';
+import { MONTH } from '../../data/joy.ts';
+import { money, dur } from '../../lib/format.ts';
+
+const asks = [ANSWERS[0], ANSWERS[1], ANSWERS[2], ANSWERS[3], ANSWERS[5]];
+// Joy's window plays three real kinds of conversation from the demo salon's threads: a late-night booking, a first
+// visit that needs a consult and deposit, and a question she will not guess at, handed to the team with the reason
+type Bubble = { k: 'in' | 'joy' | 'ok' | 'hand'; t: string; icon?: string };
+const joyScenes: { name: string; via: string; msgs: Bubble[] }[] = [
+  { name: 'Maya Chen', via: 'Instagram DM · 9:47 pm', msgs: [
+    { k: 'in', t: 'Hi! Do you have balayage openings this week?' },
+    { k: 'joy', t: `Hi Maya, it’s Joy from ${SALON.name}. Elena has Thu 4:30 pm or Sat 11:00 am. Balayage starts at ${money(service('balayage').price)}. Want one?` },
+    { k: 'in', t: 'Saturday works!' },
+    { k: 'ok', icon: 'calendar-check', t: 'Booked by Joy · Sat 11:00 am' },
+  ] },
+  { name: 'Ines Brooks', via: 'Facebook message · first visit', msgs: [
+    { k: 'in', t: 'Hello, I’d like to book colour correction. First time with you.' },
+    { k: 'joy', t: 'Hi Ines! Colour correction starts with a quick consult. Tuesday at 10:30 am with Elena is open. Want me to hold it?' },
+    { k: 'in', t: 'Yes please!' },
+    { k: 'joy', t: 'Held for you. A $40 deposit confirms it.' },
+    { k: 'ok', icon: 'credit-card', t: 'Deposit paid · booked by Joy · Tue 10:30 am' },
+  ] },
+  { name: 'Amara Chen', via: 'Missed call · text back', msgs: [
+    { k: 'joy', t: `Hi Amara, it’s Joy at ${SALON.name}. Sorry we missed your call. How can I help?` },
+    { k: 'in', t: 'How much is a toner on top of my highlights?' },
+    { k: 'joy', t: 'I’m not certain about that, so I’m asking the team to reply to you personally.' },
+    { k: 'hand', icon: 'user-round', t: 'Handed to the team · toner price is not on the menu' },
+  ] },
+];
+---
+<!-- Joy and Dash -->
+<section class="wl-wrap wl-sec" aria-labelledby="h-ai">
+  <h2 id="h-ai"><span class="l1">One talks to your guests.</span> <span class="l2">One talks to you.</span></h2>
+  <div class="wl-duo">
+    <article class="ai ai-joy" id="joy" aria-labelledby="h-joy">
+      <div class="ai-side">
+        <h3 id="h-joy"><img class="ai-lockup" src="/brand/joy-lockup.svg" alt="Joy" width="669" height="300" /></h3>
+        <p class="ai-tag">Your AI receptionist. Faces your guests.</p>
+        <p class="ai-blurb">Joy answers texts, Instagram and Facebook DMs and web chat in under a minute, day or night. She offers real open times from your booking system and books them. When she is unsure, she hands off to the team with a reason.</p>
+        <dl class="ai-stats">
+          <div><dt>Leads answered</dt><dd class="tnum">{MONTH.answered} of {MONTH.total}</dd></div>
+          <div><dt>Median first reply</dt><dd class="tnum">{dur(MONTH.median)}</dd></div>
+          <div><dt>Booked by Joy</dt><dd class="tnum">{MONTH.booked}</dd></div>
+        </dl>
+      </div>
+      <div class="ai-win" data-joy role="group" aria-label="Joy, three example conversations">
+        <div class="ai-stack">
+          {joyScenes.map((sc, i) => (
+            <div class={`ai-scene${i === 0 ? ' is-on' : ''}`} data-scene>
+              <div class="ai-win-bar"><span class="ai-win-who"><b>{sc.name}</b> {sc.via}</span><span class="ai-win-tag"><img src="/brand/joy-mark.svg" alt="" width="18" height="18" />Joy</span></div>
+              <div class="ai-chat">
+                {sc.msgs.map((m) => m.k === 'ok' || m.k === 'hand'
+                  ? <p class={m.k === 'ok' ? 'c-booked' : 'c-hand'} data-b><Icon name={m.icon!} size={15} />{m.t}</p>
+                  : <p class={m.k === 'in' ? 'c-in' : 'c-joy'} data-b><span>{m.t}</span></p>)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </article>
+
+    <article class="ai ai-dash" id="dash" aria-labelledby="h-dash">
+      <div class="ai-side">
+        <h3 id="h-dash"><img class="ai-lockup" src="/brand/dash-lockup.svg" alt="Dash" width="794" height="300" /></h3>
+        <p class="ai-tag">Your AI analyst. Works for you.</p>
+        <p class="ai-blurb">Ask in plain English and Dash answers from your own numbers: what is working, what it is worth and what to do this week. Every answer ends in a button. When data is missing, Dash says so instead of guessing.</p>
+      </div>
+      <div class="ai-win ai-ask">
+        <div class="ai-win-bar"><span class="ai-win-who"><b>Ask Dash</b> {SALON.name} · last 30 days</span><span class="ai-win-tag ai-win-tag-dash"><img src="/brand/dash-mark.svg" alt="" width="18" height="18" />Dash</span></div>
+        <div class="ai-chips" role="group" aria-label="Ask Dash a question">
+          {asks.map((a, i) => <button type="button" class="ai-chip" aria-pressed={i === 0 ? 'true' : 'false'} data-ask={i}>{a.q}</button>)}
+        </div>
+        <div class="ai-answer" aria-live="polite">
+          {asks.map((a, i) => (
+            <div data-answer={i} class={i === 0 ? 'is-on' : undefined}>
+              <p>{a.text}</p>
+              <p class="ai-cites">From: {a.cites.join(' · ')}</p>
+              {a.cta && <span class="ai-cta">{a.cta.label}<Icon name="arrow-right" size={14} /></span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<script>
+  import '../../scripts/waitlist-ai.ts';
+</script>

@@ -1,0 +1,303 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Avatar from '../components/Avatar.astro';
+import StatusIcon from '../components/StatusIcon.astro';
+import ListTools from '../components/ListTools.astro';
+import RequestRow from '../components/bookings/RequestRow.astro';
+import TabMenu from '../components/settings/TabMenu.astro';
+import { REQUEST_VIEWS, NO_SHOWS, UPCOMING, SCHEDULE_DATA, SYNC } from '../data/bookings.ts';
+import { dayLabel, fmtMin } from '../data/bookings-core.ts';
+import { service, stylist } from '../data/salon.ts';
+import { money, plural, dur } from '../lib/format.ts';
+
+const pending = REQUEST_VIEWS.filter((r) => r.status === 'pending');
+const by = (b: string) => pending.filter((r) => r.bucket === b);
+const confirmed = REQUEST_VIEWS.filter((r) => r.status === 'confirmed');
+const declined = REQUEST_VIEWS.filter((r) => r.status === 'declined');
+const groups = [
+  { id: 'urgent', title: 'Needs an answer today or tomorrow', rows: by('urgent') },
+  { id: 'week', title: 'This week', rows: by('week') },
+  { id: 'later', title: 'Later', rows: by('later') },
+  { id: 'proposed', title: 'Waiting on the guest', rows: [] as typeof pending },
+  { id: 'confirmed', title: 'Confirmed', rows: confirmed },
+  { id: 'declined', title: 'Declined', rows: declined },
+];
+const lost = NO_SHOWS.reduce((s, n) => s + n.value, 0);
+const byTag = ['booked:Booked', 'confirmed:Confirmed', 'in_progress:In the chair', 'checked_out:Done', 'no_show:No-show'];
+const closedDays = UPCOMING.filter((u) => u.closed).map((u) => dayLabel(u.day));
+const payload = { schedule: SCHEDULE_DATA, requests: Object.fromEntries(REQUEST_VIEWS.map((r) => [r.id, { id: r.id, name: r.name, phone: r.phone, consent: r.consent, service: r.serviceId, minutes: r.minutes, stylist: r.stylistId, suggestion: r.suggestion, suggestionLabel: r.suggestionLabel, svcName: r.svcName, price: r.price, fromPrice: r.fromPrice, stylistName: r.stylistName, via: r.via === 'instagram' ? 'Instagram' : r.via === 'joy' ? 'Joy' : 'Website form', waited: dur(r.waitMs) + ' ago', asked: r.reqLabels.map((l) => l.replace(',', '') + (r.reqClosed.some((c) => l.startsWith(c)) ? ' (closed)' : '')), reason: r.reason, awaiting: r.awaiting, notes: r.notes ?? '', flagSet: r.flagSet, other: r.otherFlags, alts: r.alts.map((a) => ({ v: `${a.day}|${a.min}|${a.stylist}`, label: a.label })) }])) };
+---
+<AppShell title="Bookings" active="bookings" description="Booking requests to confirm, the day's schedule, upcoming appointments and no-shows to rebook.">
+  <div class="bk">
+    <header class="bk-head">
+      <div><h1 class="t-title">Bookings</h1>
+        <p class="t-meta bk-sync"><StatusIcon state="connected" size={12} /> {SYNC.note}</p></div>
+    </header>
+
+    <TabMenu name="bk" label="Bookings view" items={[{ id: 'requests', label: 'Requests', count: pending.length }, { id: 'schedule', label: 'Schedule' }, { id: 'upcoming', label: 'Upcoming' }, { id: 'noshows', label: 'No-shows', count: NO_SHOWS.length }]} />
+    <div class="bk-tabs has-tm" data-tabs>
+      <div class="tabs" role="tablist" aria-label="Bookings views">
+        <button class="tab" role="tab" data-panel="requests" aria-selected="true">Requests <span class="count hot" id="cnt-req">{pending.length}</span></button>
+        <button class="tab" role="tab" data-panel="schedule" aria-selected="false">Schedule</button>
+        <button class="tab" role="tab" data-panel="upcoming" aria-selected="false">Upcoming</button>
+        <button class="tab" role="tab" data-panel="noshows" aria-selected="false">No-shows <span class="count">{NO_SHOWS.length}</span></button>
+      </div>
+    </div>
+
+    <section data-panel-id="requests" aria-label="Booking requests" class="bk-panel">
+      <div class="bk-lead-row"><p class="t-small muted bk-lead hide-m" id="req-lead">{plural(pending.length, 'request')} to answer. Nothing reaches Phorest or a guest until you approve.</p><ListTools label="booking requests" /></div>
+      <div class="list" id="req-list">
+        {groups.map((g) => (
+          <div class="group" data-group={g.id} hidden={g.rows.length === 0}>
+            <button type="button" class="group-head"><Icon name="chevron-down" size={14} class="chev" /><span>{g.title}</span><span class="count">{g.rows.length}</span></button>
+            <div class="group-body">{g.rows.map((r) => <RequestRow r={r} />)}</div>
+          </div>
+        ))}
+        <div class="empty" id="req-empty" hidden><strong>All caught up</strong>Every request has an answer. New ones from the form, Joy and Instagram land here.</div>
+      </div>
+      <div class="req-scrim" id="req-scrim" hidden></div>
+      <aside class="req-drawer" id="req-drawer" aria-label="Request details" tabindex="-1" hidden></aside>
+    </section>
+
+    <section data-panel-id="schedule" aria-label="Schedule" class="bk-panel" hidden>
+      <div class="toolbar bk-bar">
+        <div class="seg" role="group" aria-label="Day"><button type="button" data-day="-1" aria-pressed="false">Yesterday</button><button type="button" data-day="0" aria-pressed="true">Today</button><button type="button" data-day="1" aria-pressed="false">Tomorrow</button></div>
+        <button type="button" class="icon-btn" data-day-step="-1" aria-label="Previous day"><Icon name="chevron-left" size={16} /></button>
+        <button type="button" class="icon-btn" data-day-step="1" aria-label="Next day"><Icon name="chevron-right" size={16} /></button>
+        <input class="input bk-date" type="date" id="sch-date" aria-label="Pick a day" />
+        <strong class="bk-daylabel" id="sch-label"></strong>
+        <span class="grow"></span>
+        <div class="bk-chips" role="group" aria-label="Stylist filter" id="sch-chips"></div>
+        <button type="button" class="btn btn-primary" id="new-booking"><Icon name="plus" size={14} />New booking <span class="kbd hide-m">N</span></button>
+      </div>
+      <div class="split bk-split">
+        <div class="primary">
+          <div id="sch-grid" class="tg-wrap"></div>
+          <div id="sch-agenda" class="agenda"></div>
+          <ul class="bk-legend t-small muted" aria-label="Colour key">
+            {byTag.map((t) => { const [k, l] = t.split(':'); return <li><StatusIcon state={k === 'booked' ? 'pending' : k === 'confirmed' ? 'confirmed' : k === 'in_progress' ? 'active' : k === 'checked_out' ? 'done' : 'not_answered'} size={12} />{l}</li>; })}
+            <li class="hide-m"><span class="kbd">←</span><span class="kbd">→</span> change day <span class="kbd">T</span> today</li>
+          </ul>
+        </div>
+        <aside class="aside bk-aside" id="sch-aside" aria-label="Details" tabindex="-1"></aside>
+      </div>
+    </section>
+
+    <section data-panel-id="upcoming" aria-label="Upcoming appointments" class="bk-panel" hidden>
+      <div class="toolbar bk-bar up-bar">
+        <div class="seg" role="group" aria-label="Appointment view"><button type="button" data-upview="list" aria-pressed="true"><Icon name="list" size={13} />List</button><button type="button" data-upview="week" aria-pressed="false" class="hide-m"><Icon name="calendar-range" size={13} />Week</button><button type="button" data-upview="month" aria-pressed="false"><Icon name="calendar" size={13} />Month</button></div>
+        <div class="cal-nav" id="cal-nav" hidden>
+          <button type="button" class="icon-btn" data-cal-step="-1" aria-label="Previous"><Icon name="chevron-left" size={16} /></button>
+          <button type="button" class="icon-btn" data-cal-step="1" aria-label="Next"><Icon name="chevron-right" size={16} /></button>
+          <button type="button" class="btn btn-sm" data-cal-today>Today</button>
+          <strong id="cal-label" aria-live="polite"></strong>
+        </div>
+      </div>
+      <div id="up-cal" class="up-cal" hidden></div>
+      <div id="up-list">
+      <p class="t-small muted bk-lead">Next 14 days from Phorest, {plural(UPCOMING.reduce((s, u) => s + u.items.length, 0), 'appointment')}. Closed {closedDays.join(', ')}.</p>
+      <div class="list">
+        {UPCOMING.filter((u) => u.items.length).map((u) => (
+          <div class="group">
+            <button type="button" class="group-head"><Icon name="chevron-down" size={14} class="chev" /><span>{dayLabel(u.day, 'rel')}{u.day > 1 || u.day === 0 ? '' : ''}</span><span class="count">{u.items.length}</span></button>
+            <div class="group-body">
+              {u.items.map((a) => (
+                <div class="row up-row" data-goto-appt={a.id} data-goto-day={a.day} tabindex="0" role="link">
+                  <span class="cell tnum muted">{fmtMin(a.start)}</span>
+                  <span class="cell"><StatusIcon state={a.status === 'confirmed' ? 'confirmed' : a.status === 'in_progress' ? 'active' : 'pending'} /><Avatar name={a.name} size="sm" /><span class="truncate"><span class="name">{a.name}</span><span class="sub only-m"> · {service(a.service).name}</span></span></span>
+                  <span class="cell muted hide-m">{service(a.service).name}</span>
+                  <span class="cell muted hide-m">{stylist(a.stylist).name}</span>
+                  <span class="cell muted hide-m">{a.by === 'joy' ? 'Booked by Joy' : a.by === 'team' ? 'Booked by team' : 'Booked online'}</span>
+                  <span class="cell right tnum">{money(a.value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      </div>
+    </section>
+
+    <section data-panel-id="noshows" aria-label="No-shows" class="bk-panel" hidden>
+      <p class="t-small muted bk-lead">{plural(NO_SHOWS.length, 'no-show')} in the last 14 days, {money(lost)} not earned. Texts go out now; quiet hours (9 pm to 8 am) are not active.</p>
+      <div class="list">
+        <div class="row head ns-row"><span class="cell">Guest</span><span class="cell hide-m">Missed</span><span class="cell hide-m">Stylist</span><span class="cell hide-m">Text consent</span><span class="cell right">Action</span></div>
+        {NO_SHOWS.map((n) => (
+          <div class="row ns-row" data-ns={n.id}>
+            <span class="cell"><StatusIcon state="not_answered" /><Avatar name={n.name} size="sm" /><span class="truncate"><span class="name">{n.name}</span><span class="sub only-m"> · {n.svcName}, {dayLabel(n.day)}</span></span></span>
+            <span class="cell muted hide-m truncate">{n.svcName} · {dayLabel(n.day)} {fmtMin(n.start)} · {money(n.value)}</span>
+            <span class="cell muted hide-m">{n.stylistName}</span>
+            <span class="cell hide-m">{n.consent ? <><StatusIcon state="connected" size={12} /><span>Yes</span></> : <><StatusIcon state="off" size={12} /><span class="muted">No consent</span></>}</span>
+            <span class="cell right ns-act">
+              {n.consent && !n.next ? <button type="button" class="btn btn-sm" data-ns-text={n.id} data-name={n.name} data-svc={n.svcName}>Text to rebook</button>
+                : n.next ? <span class="t-small muted">Already rebooked</span>
+                : <a class="btn btn-sm" href={`tel:${n.phone.replace(/[^0-9]/g, '')}`} title="No text consent on file, so PRISM will not text">Call {n.phone}</a>}
+              <span class="t-small muted" data-ns-done hidden></span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  </div>
+  <script type="application/json" id="bk-data" set:html={JSON.stringify(payload)}></script>
+  <script>import '../scripts/bookings.ts';</script>
+  <script>import '../scripts/bookings-cal.ts';</script>
+</AppShell>
+
+<style is:global>
+  .bk { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); max-width: none; }
+  .bk .t-title, .jy .t-title, .tm .t-title { font-size: var(--t-20, 20px); }
+  .bk-head { display: flex; justify-content: space-between; gap: var(--s-4); align-items: flex-end; }
+  .bk-sync { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .bk-tabs { border-bottom: 1px solid var(--line); padding-bottom: var(--s-2); overflow-x: auto; scrollbar-width: none; }
+  .bk-lead { padding: var(--s-2) 0 var(--s-3); }
+  .bk-panel .list { border-top: 1px solid var(--line); }
+  /* requests: one dense row each; details live in the drawer */
+  .req { --cols: minmax(0, 1fr); display: flex; align-items: center; gap: var(--s-3); min-height: 40px; padding-top: 0; padding-bottom: 0; cursor: pointer; }
+  .req:hover { background: var(--hover); }
+  .req[aria-selected="true"] { background: var(--select); }
+  .req > .avatar { flex: none; }
+  .req-main { display: flex; align-items: baseline; gap: var(--s-3); min-width: 0; flex: 1; }
+  .req-l1 { display: flex; align-items: baseline; gap: var(--s-2); flex: none; max-width: 46%; min-width: 0; white-space: nowrap; }
+  .req-l1 .name { overflow: hidden; text-overflow: ellipsis; }
+  .req-svc { color: var(--ink-3); font-size: var(--t-13); overflow: hidden; text-overflow: ellipsis; }
+  .req-line { color: var(--ink-3); font-size: var(--t-12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  .req-ic { display: inline-flex; flex: none; }
+  .req-act { display: flex; flex: none; justify-content: flex-end; min-width: 76px; }
+  .req-act .btn { height: 28px; padding: 0 12px; font-weight: 500; }
+  .req-done { white-space: nowrap; }
+  .req-scrim { display: none; }
+  .req-drawer { position: fixed; z-index: 90; top: 52px; right: 0; bottom: 0; width: 400px; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--float); padding: var(--s-4); display: grid; gap: var(--s-3); align-content: start; }
+  .req-drawer[hidden] { display: none; }
+  @media (min-width: 961px) { .bk.req-open [data-panel-id="requests"] .list { margin-right: 400px; } }
+  .rd-head { display: flex; align-items: center; gap: var(--s-3); } .rd-head h2 { font-size: var(--t-16, 16px); font-weight: 600; } .rd-head .icon-btn { margin-left: auto; }
+  .rd-why { display: grid; gap: 4px; padding: var(--s-3); background: var(--sunken); border-radius: var(--r-md); font-size: var(--t-13); }
+  .rd-why b { font-size: var(--t-12); color: var(--ink-3); font-weight: 600; }
+  .rd-dl { display: grid; margin: 0; } .rd-dl > div { display: flex; justify-content: space-between; gap: var(--s-4); min-height: 32px; align-items: center; border-bottom: 1px solid var(--line); font-size: var(--t-13); } .rd-dl dt { color: var(--ink-3); } .rd-dl dd { margin: 0; text-align: right; font-weight: 500; }
+  .rd-acts { display: grid; gap: var(--s-2); }
+  .rd-acts .btn { width: 100%; justify-content: center; height: 36px; } .rd-acts .btn-black { justify-content: space-between; }
+  .rd-note { font-size: var(--t-12); color: var(--ink-3); margin: -2px 0 var(--s-2); }
+  .rd-picker { display: grid; gap: var(--s-2); padding: var(--s-3); border: 1px solid var(--line); border-radius: var(--r-md); }
+  .rd-picker[hidden] { display: none; }
+  .rd-picker .row-btns { display: flex; gap: 6px; }
+  .rd-done { padding: var(--s-3); background: var(--sunken); border-radius: var(--r-md); font-size: var(--t-13); }
+    .bk-lead-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) 0 var(--s-3); }
+  @media (max-width: 900px) { .bk-lead-row { justify-content: flex-end; padding: 0; } .bk { gap: var(--s-3); } }
+  .bk-lead-row .bk-lead { padding: 0; }
+  /* schedule */
+  .bk-bar { padding-left: 0; padding-right: 0; border-top: 0; }
+  .bk-date { width: 150px; } .bk-daylabel { font-size: var(--t-14); white-space: nowrap; margin-left: var(--s-1); }
+  .bk-chips { display: flex; gap: 6px; }
+  .bk-split { align-items: start; } .bk-split > .aside { min-height: 420px; }
+  .tg-wrap { min-width: 0; }
+  .tg { --px: 64px; display: grid; grid-template-columns: 52px repeat(var(--n), minmax(0, 1fr)); min-width: 0; position: relative; }
+  .tg-head { display: contents; }
+  .tg-h { position: sticky; top: 52px; z-index: 3; display: flex; align-items: center; gap: var(--s-2); height: 38px; padding: 0 var(--s-2); background: var(--sunken); border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); font-size: var(--t-13); font-weight: 600; }
+  .tg-h small { color: var(--ink-3); font-weight: 500; font-size: var(--t-11); } .tg-h:first-child { border-left: 0; }
+  .tg-gutter { position: relative; height: calc(var(--px) * var(--hrs)); }
+  .tg-gutter span { position: absolute; right: 8px; transform: translateY(-50%); font-size: var(--t-11); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .tg-col { position: relative; height: calc(var(--px) * var(--hrs)); border-left: 1px solid var(--line); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--px) - 1px), var(--line) calc(var(--px) - 1px), var(--line) var(--px)); }
+  .tg-shade { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(135deg, var(--sunken) 0 6px, var(--surface) 6px 12px); opacity: .9; }
+  .tg-blk { position: absolute; left: 3px; right: 3px; padding: 3px 6px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); font-size: var(--t-12); line-height: 1.25; overflow: hidden; text-align: left; display: block; transition: outline-color var(--dur) var(--ease); outline: 2px solid transparent; outline-offset: 0; }
+  .tg-blk:hover { border-color: var(--violet); }
+  .tg-blk[aria-pressed="true"] { outline-color: var(--violet); }
+  .tg-blk .b-t { display: flex; align-items: center; gap: 4px; font-weight: 600; } .tg-blk .b-t svg { margin-left: auto; }
+  .tg-blk .b-s { color: var(--ink-2); }
+  .tg-blk.s-booked { background: var(--watch-wash); border-color: #E7CF98; } .tg-blk.s-confirmed { background: var(--violet-wash); border-color: var(--violet-soft); }
+  .tg-blk.s-in_progress { background: var(--good-wash); border-color: #A9D8BF; } .tg-blk.s-checked_out { background: var(--sunken); color: var(--ink-2); }
+  .tg-blk.s-no_show { background: var(--attn-wash); border-color: #EDB7AB; }
+  .tg-blk.short { display: flex; align-items: center; gap: 6px; } .tg-blk.short .b-s { display: none; }
+  .tg-blk.brk { background: var(--off-wash); border-style: dashed; color: var(--ink-3); pointer-events: none; display: flex; align-items: center; font-size: var(--t-11); }
+  .tg-free { position: absolute; left: 3px; right: 3px; border-radius: var(--r-sm); border: 1px dashed transparent; display: none; place-items: center; font-size: var(--t-11); color: var(--violet-deep); font-weight: 600; }
+  .tg-col:hover .tg-free { display: grid; } .tg-free:hover { border-color: var(--violet-soft); background: var(--violet-wash); }
+  .tg-now { position: absolute; left: 52px; right: 0; height: 0; border-top: 1.5px solid var(--attn); z-index: 2; pointer-events: none; }
+  .tg-now::before { content: attr(data-t); position: absolute; left: -52px; top: -9px; padding: 1px 5px; border-radius: 4px; background: var(--attn); color: #fff; font-size: var(--t-11); font-weight: 600; }
+  .tg-closed { padding: var(--s-10) var(--s-6); text-align: center; }
+  .bk-legend { display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: center; padding: var(--s-3) var(--s-2); } .bk-legend li { display: inline-flex; align-items: center; gap: 5px; }
+  .agenda { display: none; }
+  .bk-aside { display: grid; gap: 2px; align-content: start; }
+  .bk-aside h2 { font-size: var(--t-14); font-weight: 600; }
+  .bk-aside .a-head { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); } .bk-aside .a-head .icon-btn { margin-left: auto; }
+  .a-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: var(--s-3); } .a-acts .btn { padding: 0 6px; }
+  .a-form { display: grid; gap: var(--s-3); margin-top: var(--s-2); }
+  .a-note { font-size: var(--t-12); color: var(--ink-3); } .a-note.warn { color: var(--watch); font-weight: 600; } .a-note.bad { color: var(--attn); font-weight: 600; } .a-note.ok { color: var(--good); font-weight: 600; }
+  .a-gaps { display: grid; gap: 4px; margin-top: 2px; font-size: var(--t-12); } .a-gaps div { display: flex; justify-content: space-between; gap: 8px; }
+  /* upcoming / no-shows */
+  .up-row { --cols: 76px minmax(180px, 1.3fr) minmax(130px, 1fr) minmax(120px, 1fr) 130px 70px; }
+  .ns-row { --cols: minmax(180px, 1.1fr) minmax(220px, 1.8fr) 140px 120px 190px; }
+  .ns-act { gap: var(--s-2); }
+  @media (max-width: 1180px) { .req-act .btn { padding: 0 10px; } }
+  @media (max-width: 960px) { .bk-aside { position: fixed; z-index: 90; left: 0; right: 0; bottom: 0; max-height: 80dvh; overflow-y: auto; background: var(--surface); border: 0; border-top: 1px solid var(--line); border-radius: 20px 20px 0 0; box-shadow: var(--float); padding: var(--s-4) var(--s-4) calc(var(--s-6) + env(safe-area-inset-bottom)); transform: translateY(100%); visibility: hidden; transition: transform 200ms var(--ease), visibility 0s linear 200ms; } .bk-aside.open { transform: none; visibility: visible; transition-delay: 0s; } }
+  @media (min-width: 961px) { .bk-aside .a-close { display: none; } }
+  @media (max-width: 900px) {
+    .tg-wrap { display: none; } .agenda { display: block; border-top: 1px solid var(--line); }
+    .bk-legend .hide-m { display: none; }
+    .bk-bar { gap: 8px; } .bk-date { flex: 1; width: auto; }
+    .req { min-height: 56px; padding: 6px var(--s-4); gap: var(--s-3); }
+    .req-main { flex-direction: column; align-items: stretch; gap: 1px; }
+    .req-l1 { max-width: none; } .req-l1 .name { font-size: var(--t-14); flex: none; max-width: 70%; } .req-l1 .req-svc { flex: 1 1 0; min-width: 0; }
+    .req-act { min-width: 0; } .req-act .btn { height: 44px; }
+    .req-drawer { top: auto; left: 0; width: auto; max-height: 85dvh; border-left: 0; border-top: 1px solid var(--line); border-radius: 20px 20px 0 0; padding: var(--s-4) var(--s-4) calc(var(--s-6) + env(safe-area-inset-bottom)); }
+    .req-scrim { position: fixed; inset: 0; z-index: 89; background: rgba(20, 18, 28, .35); }
+    .req-scrim:not([hidden]) { display: block; }
+    .rd-acts .btn, .rd-picker .btn { min-height: 44px; }
+    .tab { white-space: nowrap; }
+    .bk-bar { flex-wrap: wrap !important; overflow: visible !important; } .bk-bar .grow, .bk-daylabel, .bk-bar .icon-btn { display: none; }
+    .bk-chips { flex-basis: 100%; order: 5; overflow-x: auto; } #new-booking { order: 6; flex: 1 1 100%; justify-content: center; }
+    .up-row { --cols: 62px minmax(0, 1fr) 58px; } .ns-row { --cols: minmax(0, 1fr) auto; }
+    .ag-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--s-3); align-items: center; min-height: 52px; padding: 6px var(--s-3); border-bottom: 1px solid var(--line); font-size: var(--t-13); width: 100%; text-align: left; }
+    .ag-row.free { color: var(--violet-deep); font-weight: 600; background: transparent; }
+  }
+
+  .up-bar { display: flex; align-items: center; gap: var(--s-3); padding-top: var(--s-2); padding-bottom: var(--s-2); flex-wrap: wrap; }
+  .up-bar .seg button { gap: 5px; }
+  .cal-nav { display: flex; align-items: center; gap: var(--s-2); } .cal-nav strong { font-family: var(--font-display); font-size: var(--t-16); font-weight: 700; margin-left: var(--s-2); letter-spacing: -0.01em; }
+  .up-cal { border-top: 1px solid var(--line); }
+  /* month */
+  .cal-m { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); margin-top: var(--s-3); }
+  .cal-wd { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: var(--sunken); border-bottom: 1px solid var(--line); }
+  .cal-wd span { padding: 8px 10px; font-size: var(--t-12); font-weight: 600; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(118px, 1fr)); }
+  .cal-day { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 0; transition: background var(--dur) var(--ease); }
+  .cal-day:nth-child(7n) { border-right: 0; } .cal-grid .cal-day:nth-last-child(-n+7) { border-bottom: 0; }
+  .cal-day:hover { background: var(--hover); }
+  .cal-day.out { background: var(--sunken); } .cal-day.out .cal-n { color: var(--ink-4); }
+  .cal-day.closed:not(.out) { background: repeating-linear-gradient(135deg, transparent 0 8px, var(--sunken) 8px 9px); }
+  .cal-n { align-self: flex-start; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; font-size: var(--t-13); font-weight: 600; color: var(--ink-2); display: grid; place-items: center; transition: background var(--dur) var(--ease); }
+  .cal-n:hover { background: var(--select); color: var(--ink); }
+  .cal-day.today .cal-n { background: var(--d-teal); color: #fff; }
+  .cal-closed { position: absolute; top: 9px; right: 8px; font-size: var(--t-11); color: var(--ink-3); }
+  .cal-chip { display: block; width: 100%; text-align: left; padding: 3px 6px; border-radius: 6px; font-size: var(--t-12); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); transition: filter var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  .cal-chip b { font-weight: 700; font-variant-numeric: tabular-nums; margin-right: 3px; }
+  .cal-chip:hover, .cal-ev:hover { filter: brightness(.94) saturate(1.15); }
+  .cal-chip.up, .cal-ev.up { background: var(--violet-wash); box-shadow: inset 0 0 0 1px var(--violet-soft); }
+  .cal-chip.live, .cal-ev.live { background: var(--d-deep); color: #fff; }
+  .cal-chip.done, .cal-ev.done { background: var(--sunken); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); }
+  .cal-chip.miss, .cal-ev.miss { background: #FFE9D6; box-shadow: inset 0 0 0 1px #FFC89B; }
+  .cal-more { align-self: flex-start; padding: 2px 6px; font-size: var(--t-12); font-weight: 600; color: var(--violet-deep); border-radius: 6px; } .cal-more:hover { background: var(--select); }
+  .cal-count { position: absolute; top: 8px; right: 8px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--d-teal); color: #fff; font-size: var(--t-11); font-weight: 700; display: grid; place-items: center; }
+  /* week */
+  .cal-w { margin-top: var(--s-3); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
+  .cal-wh { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); background: var(--sunken); border-bottom: 1px solid var(--line); }
+  .cal-wd2 { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 8px 4px; font-size: var(--t-12); color: var(--ink-3); transition: background var(--dur) var(--ease); } .cal-wd2:hover { background: var(--select); }
+  .cal-wd2 small { font-size: var(--t-12); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; } .cal-wd2 b { font-size: var(--t-14); color: var(--ink); min-width: 24px; height: 24px; border-radius: 12px; display: inline-grid; place-items: center; }
+  .cal-wd2.today b { background: var(--d-teal); color: #fff; }
+  .cal-wb { display: grid; grid-template-columns: 56px repeat(7, minmax(0, 1fr)); position: relative; }
+  .cal-hours { position: relative; height: calc(var(--row) * var(--hrs)); } .cal-hours span { position: absolute; right: 8px; transform: translateY(-7px); font-size: var(--t-11); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .cal-hours span:first-child { transform: none; }
+  .cal-col { position: relative; height: calc(var(--row) * var(--hrs)); border-left: 1px solid var(--line); background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px); background-size: 100% var(--row); }
+  .cal-col.today { background-color: var(--violet-wash); }
+  .cal-col.closed { background-color: var(--sunken); }
+  .cal-col .cal-closed { top: 10px; right: auto; left: 50%; transform: translateX(-50%); }
+  .cal-off { position: absolute; left: 0; right: 0; background: rgb(6 42 45 / .045); pointer-events: none; }
+  .cal-ev { position: absolute; padding: 4px 6px; border-radius: 7px; text-align: left; overflow: hidden; font-size: var(--t-12); line-height: 1.25; display: flex; flex-direction: column; gap: 1px; color: var(--ink); transition: filter var(--dur) var(--ease); }
+  .cal-ev b { font-weight: 700; } .cal-ev span { opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .cal-ev small { font-size: var(--t-11); opacity: .75; font-variant-numeric: tabular-nums; }
+  .cal-ev.live { color: #fff; }
+  .cal-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--d-orange); z-index: 2; pointer-events: none; } .cal-now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--d-orange); }
+  @media (max-width: 700px) {
+    .cal-grid { grid-template-rows: repeat(var(--rows), minmax(64px, 1fr)); } .cal-day { padding: 4px; align-items: flex-start; } .cal-wd span { padding: 6px 2px; text-align: center; font-size: var(--t-11); } .cal-closed { display: none; }
+    .cal-nav strong { flex-basis: 100%; margin-left: 0; }
+    .cal-count { position: static; align-self: flex-start; margin-left: 3px; min-width: 22px; height: 22px; border-radius: 11px; }
+  }
+</style>

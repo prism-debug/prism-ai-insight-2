@@ -1,0 +1,95 @@
+---
+// PRISM alpha waitlist, the launch site at getprisminsights.com. One page, structured after ramp.com: hero with
+// email capture, product film, impact river, features bento, the two AI helpers, and a fixed waitlist bar. Every
+// figure is computed from the demo salon's metrics module, the same numbers the prototype shows, and is labelled as
+// demo data. The sections are shared with the presale page (src/pages/presale.astro) through src/components/site/,
+// the styles through src/styles/site.css and the behaviour through src/scripts/waitlist-site.ts.
+import '../styles/base.css';
+import '../styles/site.css';
+import Icon from '../components/Icon.astro';
+import SiteHead from '../components/site/SiteHead.astro';
+import SiteBackdrop from '../components/site/SiteBackdrop.astro';
+import SiteNav from '../components/site/SiteNav.astro';
+import FilmSection from '../components/site/FilmSection.astro';
+import River from '../components/site/River.astro';
+import Bento from '../components/site/Bento.astro';
+import AiDuo from '../components/site/AiDuo.astro';
+import SiteClose from '../components/site/SiteClose.astro';
+import SiteFooter from '../components/site/SiteFooter.astro';
+
+const links = [{ href: '#features', label: 'Features' }, { href: '#joy', label: 'Joy' }, { href: '#dash', label: 'Dash' }];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <SiteHead
+      title="PRISM · Join the alpha waitlist"
+      description="PRISM is the growth desk for salons. Joy answers every lead in under a minute; Dash tells you which marketing books chairs and what to do next. Join the waitlist for alpha access."
+      ogTitle="PRISM · The growth desk for your salon"
+      ogDescription="Every lead answered. Every dollar traced. Join the waitlist for PRISM alpha access."
+      canonical="https://getprisminsights.com/"
+    />
+  </head>
+  <body class="wl wl-has-bar">
+    <a class="wl-skip" href="#wl-email-hero" data-focus-hero>Skip to the waitlist</a>
+    <SiteBackdrop />
+    <SiteNav links={links} cta={{ label: 'Get alpha access', href: '#wl-email-hero', focusHero: true }} />
+
+    <main id="top">
+      <!-- Hero -->
+      <section class="wl-hero wl-wrap">
+        <h1>Every lead answered.<br />Every dollar traced.</h1>
+        <p class="wl-lede">PRISM is the growth desk for your salon. <strong>Joy</strong> answers every lead in under a minute, day or night, and books them in. <strong>Dash</strong> tells you in plain English which marketing fills chairs and what to do next.</p>
+        <form class="wl-form wl-form-hero" name="waitlist" method="POST" action="/waitlist" data-netlify="true" netlify-honeypot="bot-field" data-waitlist>
+          <input type="hidden" name="form-name" value="waitlist" />
+          <input type="hidden" name="source" value="hero" />
+          <p hidden><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+          <label class="sr-only" for="wl-email-hero">Work email</label>
+          <input id="wl-email-hero" class="wl-input" type="email" name="email" required autocomplete="email" placeholder="you@yoursalon.com" />
+          <button class="wl-btn" type="submit"><span>Get alpha access</span><Icon name="arrow-right" size={16} /></button>
+          <p class="wl-form-msg" role="status" aria-live="polite"></p>
+        </form>
+        <p class="wl-fine">Alpha opens to a small group of salons. PRISM works on top of the booking system you already use, Phorest first.</p>
+      </section>
+
+      <FilmSection />
+      <River />
+      <Bento />
+      <AiDuo />
+
+      <!-- Closing -->
+      <SiteClose heading="Be one of the first salons on PRISM." text="Alpha seats are limited. Join the waitlist and we’ll reach out when yours opens.">
+        <form class="wl-form wl-form-close" name="waitlist" method="POST" action="/waitlist" data-netlify="true" netlify-honeypot="bot-field" data-waitlist>
+          <input type="hidden" name="form-name" value="waitlist" />
+          <input type="hidden" name="source" value="close" />
+          <p hidden><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+          <label class="sr-only" for="wl-email-close">Work email</label>
+          <input id="wl-email-close" class="wl-input" type="email" name="email" required autocomplete="email" placeholder="you@yoursalon.com" />
+          <button class="wl-btn" type="submit"><span>Get alpha access</span><Icon name="arrow-right" size={16} /></button>
+          <p class="wl-form-msg" role="status" aria-live="polite"></p>
+        </form>
+      </SiteClose>
+    </main>
+
+    <SiteFooter />
+
+    <!-- Fixed waitlist bar -->
+    <aside class="wl-bar" aria-label="Join the waitlist">
+      <form class="wl-bar-in" name="waitlist" method="POST" action="/waitlist" data-netlify="true" netlify-honeypot="bot-field" data-waitlist>
+        <input type="hidden" name="form-name" value="waitlist" />
+        <input type="hidden" name="source" value="bar" />
+        <p hidden><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+        <img class="wl-bar-mark" src="/brand/mark-color.svg" alt="" width="30" height="35" />
+        <p class="wl-bar-copy"><b>Join our waitlist for PRISM alpha access!</b><span class="wl-form-msg" role="status" aria-live="polite"></span></p>
+        <label class="sr-only" for="wl-email-bar">Work email</label>
+        <input id="wl-email-bar" class="wl-input" type="email" name="email" required autocomplete="email" placeholder="you@yoursalon.com" />
+        <button class="wl-btn" type="submit"><span>Get alpha access</span><Icon name="arrow-right" size={16} /></button>
+        <button class="wl-btn wl-bar-open" type="button" aria-expanded="false" aria-controls="wl-email-bar">Join</button>
+      </form>
+    </aside>
+
+    <script>
+      import '../scripts/waitlist-site.ts';
+    </script>
+  </body>
+</html>

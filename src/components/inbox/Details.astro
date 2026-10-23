@@ -1,0 +1,46 @@
+---
+import Icon from '../Icon.astro';
+import Avatar from '../Avatar.astro';
+import StatusIcon from '../StatusIcon.astro';
+import { handler } from '../../data/leads.ts';
+import { STATUS_LABEL, CHANNEL_LABEL, apptOf, clientOf, srcName, type Row } from '../../data/inbox.ts';
+import { service, stylist } from '../../data/salon.ts';
+import { money, dur, dayShort, clock } from '../../lib/format.ts';
+interface Props { row: Row; hidden?: boolean }
+const { row, hidden = true } = Astro.props;
+const l = row.lead; const hd = handler(l.status, l.ownerId); const appt = apptOf(l); const cl = clientOf(l);
+---
+<div class="rail-pane" data-rail={row.id} hidden={hidden}>
+  <div class="d-id"><Avatar name={l.name} size="lg" /><div><div class="t-head">{l.name}</div><div class="t-meta">{l.phone}</div></div></div>
+  <h3 class="props-title">Properties</h3>
+  <dl>
+    <div class="prop"><dt>Lead status</dt><dd><StatusIcon state={l.status} size={13} />{STATUS_LABEL[l.status]}</dd></div>
+    <div class="prop"><dt>Handler</dt><dd>{hd.kind === 'joy' ? <span class="inl" title="Joy is your AI receptionist. She answers texts and DMs from Brand Hub and hands over when unsure."><Avatar kind="joy" size="sm" />Joy</span> : hd.kind === 'person' ? hd.name : <span class="muted">{hd.name}</span>}</dd></div>
+    <div class="prop"><dt>Source</dt><dd class="truncate">{srcName(l)}</dd></div>
+    <div class="prop"><dt>Service</dt><dd class="truncate">{service(l.serviceId).name}</dd></div>
+    <div class="prop"><dt>Likely value</dt><dd class="tnum">{money(l.likelyValue)}</dd></div>
+    <div class="prop"><dt>First reply</dt><dd class="tnum">{l.firstReplyMs != null ? <>{dur(l.firstReplyMs)} <span class="muted">by {l.firstReplyBy === 'joy' ? 'Joy' : 'the team'}</span></> : <span class="muted">Not yet</span>}</dd></div>
+    <div class="prop"><dt>Text consent</dt><dd class={`consent-v ${l.consentSms ? 'ok' : 'off'}`}><Icon name={l.consentSms ? 'circle-check' : 'circle-x'} size={15} /><span class="muted">{l.consentSms ? 'Agreed' : 'No consent'}</span></dd></div>
+    <div class="prop"><dt>Promo texts</dt><dd class={`consent-v ${l.consentMarketing ? 'ok' : 'off'}`}><Icon name={l.consentMarketing ? 'circle-check' : 'circle-x'} size={15} /><span class="muted">{l.consentMarketing ? 'Agreed' : 'Not agreed'}</span></dd></div>
+  </dl>
+  {appt && (<>
+    <h3 class="props-title">Booking</h3>
+    <dl>
+      <div class="prop"><dt>When</dt><dd class="tnum">{dayShort(appt.start)}, {clock(appt.start)}</dd></div>
+      <div class="prop"><dt>With</dt><dd>{stylist(appt.stylistId).name}</dd></div>
+    </dl>
+  </>)}
+  <h3 class="props-title">Other threads</h3>
+  <p class="t-small muted d-note">One thread per guest. Texts, DMs, email, forms and calls from {l.name.split(' ')[0]} all land here.</p>
+  <dl>
+    <div class="prop"><dt>Phone</dt><dd class="tnum">{l.phone}</dd></div>
+    {l.ig && <div class="prop"><dt>Instagram</dt><dd><span class="truncate" title={l.ig}>{l.ig}</span></dd></div>}
+    {l.email && <div class="prop"><dt>Email</dt><dd><span class="truncate" title={l.email}>{l.email}</span></dd></div>}
+    <div class="prop"><dt>Started on</dt><dd>{CHANNEL_LABEL[row.chan]}</dd></div>
+  </dl>
+  {l.tags.length > 0 && <div class="d-tags">{l.tags.map((t) => <span class="tag">{t}</span>)}</div>}
+  <div class="d-links">
+    <a class="btn" href={`/leads/${l.id}`}>Open lead record<Icon name="arrow-up-right" size={14} /></a>
+    {cl && <a class="btn btn-quiet" href={`/clients/${cl.id}`}>Open client record</a>}
+  </div>
+</div>

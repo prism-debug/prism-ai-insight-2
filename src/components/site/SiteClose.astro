@@ -1,0 +1,13 @@
+---
+// The dark closing band. The page puts its own call to action in the slot: the waitlist form, or a button.
+interface Props { heading: string; text: string }
+const { heading, text } = Astro.props;
+---
+<section class="wl-close">
+  <div class="wl-wrap wl-close-in">
+    <img src="/brand/mark-white.svg" alt="" width="56" height="63" />
+    <h2>{heading}</h2>
+    <p>{text}</p>
+    <slot />
+  </div>
+</section>
